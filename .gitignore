@@ -1,0 +1,7 @@
+# IDE/Editor
+.vscode/
+.idea/
+
+# Miscellaneous
+.DS_Store
+local-docs/
