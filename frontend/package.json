@@ -3,10 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev:next": "next dev",
+    "dev": "concurrently --kill-others --names routes,next --prefix-colors cyan,green \"bun routes:watch\" \"bun dev:next\"",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "preinstall": "npx only-allow bun",
+    "prepare": "husky",
+    "routes:generate": "bun scripts/generate-routes.ts",
+    "routes:watch": "bun scripts/watch-routes.ts"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.2.1",
