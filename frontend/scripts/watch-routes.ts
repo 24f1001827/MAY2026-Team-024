@@ -77,6 +77,13 @@ process.stdout.write(`   ${WATCH_DIR}\n\n`)
 // Always generate once on startup so the watcher launches with fresh output.
 generateRoutes()
 
+// The dashboard tree may not exist yet (e.g. on a fresh branch). generateRoutes
+// handles that by emitting an empty tree, but fs.watch throws ENOENT on a
+// missing path — so ensure the directory exists before watching it.
+if (!fs.existsSync(WATCH_DIR)) {
+  fs.mkdirSync(WATCH_DIR, { recursive: true })
+}
+
 const watcher = fs.watch(
   WATCH_DIR,
   { recursive: true },
