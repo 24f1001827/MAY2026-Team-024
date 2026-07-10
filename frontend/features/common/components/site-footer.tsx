@@ -1,11 +1,12 @@
 import Link from "next/link"
 
 import { Logo } from "@/features/common/components/logo"
+import { publicRoutes } from "@/nav"
 
 const LINKS = [
-  { label: "About", href: "/about" },
-  { label: "Support", href: "/support" },
-  { label: "Contact", href: "/contact" },
+  { label: "About", href: publicRoutes.about },
+  { label: "Support", href: publicRoutes.support },
+  { label: "Contact", href: publicRoutes.contact },
 ]
 
 export function SiteFooter() {

@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { cn } from "@/lib/utils"
+import { publicRoutes } from "@/nav"
 
 type LogoSize = "md" | "lg"
 
@@ -16,7 +17,7 @@ const WORD: Record<LogoSize, string> = {
 
 export function Logo({
   size = "md",
-  href = "/",
+  href = publicRoutes.home,
 }: {
   size?: LogoSize
   href?: string

@@ -5,6 +5,8 @@ import { BellIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/shadcn/button"
 import { Logo } from "@/features/common/components/logo"
 import { ThemeToggle } from "@/features/common/components/theme-toggle"
+import { RegisterMenu } from "@/features/auth/components/register-menu"
+import { publicRoutes } from "@/nav"
 
 export function SiteHeader() {
   return (
@@ -28,11 +30,9 @@ export function SiteHeader() {
           <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
 
           <Button asChild variant="ghost" size="lg">
-            <Link href="/login">Login</Link>
+            <Link href={publicRoutes.login}>Login</Link>
           </Button>
-          <Button asChild variant="brand" size="lg">
-            <Link href="/register">Register</Link>
-          </Button>
+          <RegisterMenu />
         </div>
       </div>
     </header>
