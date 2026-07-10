@@ -7,6 +7,14 @@
  */
 
 import type { MetadataRegistry } from "../types"
+import { rootMetadata } from "./root.meta"
+import { complaintsMetadata } from "./complaints.meta"
+import { tendersMetadata } from "./tenders.meta"
+import { agenciesMetadata } from "./agencies.meta"
+import { departmentsMetadata } from "./departments.meta"
+import { officersMetadata } from "./officers.meta"
+import { notificationsMetadata } from "./notifications.meta"
+import { settingsMetadata } from "./settings.meta"
 
 function validateMetadataModules(
   modules: Record<string, MetadataRegistry>
@@ -36,5 +44,14 @@ function validateMetadataModules(
   return Object.assign({}, ...Object.values(modules)) as MetadataRegistry
 }
 
-// No modules yet — register `<module>Metadata` entries here as routes are added.
-export const metadataRegistry: MetadataRegistry = validateMetadataModules({})
+// Register each `<module>.meta.ts` here as dashboard modules are added.
+export const metadataRegistry: MetadataRegistry = validateMetadataModules({
+  root: rootMetadata,
+  complaints: complaintsMetadata,
+  tenders: tendersMetadata,
+  agencies: agenciesMetadata,
+  departments: departmentsMetadata,
+  officers: officersMetadata,
+  notifications: notificationsMetadata,
+  settings: settingsMetadata,
+})
