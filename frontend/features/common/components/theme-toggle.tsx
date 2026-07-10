@@ -1,38 +1,35 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useTheme } from "next-themes"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Moon02Icon, Sun03Icon } from "@hugeicons/core-free-icons"
 
 import { Button } from "@/components/shadcn/button"
 
 /**
- * Toggles the `.dark` class on <html> and persists the choice to localStorage.
- * The initial class is applied before paint by the inline script in layout.tsx,
- * so this only needs to sync its visual state on mount.
+ * Toggles between light and dark themes via next-themes (which manages the
+ * `.dark` class on <html>). Renders a neutral placeholder until mounted to
+ * avoid a hydration mismatch, since the resolved theme is only known client-side.
  */
 export function ThemeToggle() {
-  const [isDark, setIsDark] = useState(false)
+  const { resolvedTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
 
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"))
-  }, [])
+  useEffect(() => setMounted(true), [])
 
-  function toggle() {
-    const next = !document.documentElement.classList.contains("dark")
-    document.documentElement.classList.toggle("dark", next)
-    localStorage.setItem("theme", next ? "dark" : "light")
-    setIsDark(next)
-  }
+  const isDark = resolvedTheme === "dark"
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={toggle}
+      onClick={() => setTheme(isDark ? "light" : "dark")}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
-      <HugeiconsIcon icon={isDark ? Sun03Icon : Moon02Icon} />
+      {mounted && (
+        <HugeiconsIcon icon={isDark ? Sun03Icon : Moon02Icon} />
+      )}
     </Button>
   )
 }
