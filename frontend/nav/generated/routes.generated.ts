@@ -5,7 +5,7 @@
  * Run `bun routes:generate` to regenerate from the filesystem.
  *
  * Source: app/dashboard (scanned recursively)
- * Generated: 2026-07-07
+ * Generated: 2026-07-10
  */
 
 import type { RouteNode } from '../types';
@@ -16,7 +16,64 @@ export const ROUTE_TREE: RouteNode = {
   path: '/dashboard',
   isDynamic: false,
   isCatchAll: false,
-  children: [],
+  children: [
+  {
+    id: 'agencies',
+    segment: 'agencies',
+    path: '/dashboard/agencies',
+    isDynamic: false,
+    isCatchAll: false,
+    children: [],
+  },
+  {
+    id: 'complaints',
+    segment: 'complaints',
+    path: '/dashboard/complaints',
+    isDynamic: false,
+    isCatchAll: false,
+    children: [],
+  },
+  {
+    id: 'departments',
+    segment: 'departments',
+    path: '/dashboard/departments',
+    isDynamic: false,
+    isCatchAll: false,
+    children: [],
+  },
+  {
+    id: 'notifications',
+    segment: 'notifications',
+    path: '/dashboard/notifications',
+    isDynamic: false,
+    isCatchAll: false,
+    children: [],
+  },
+  {
+    id: 'officers',
+    segment: 'officers',
+    path: '/dashboard/officers',
+    isDynamic: false,
+    isCatchAll: false,
+    children: [],
+  },
+  {
+    id: 'settings',
+    segment: 'settings',
+    path: '/dashboard/settings',
+    isDynamic: false,
+    isCatchAll: false,
+    children: [],
+  },
+  {
+    id: 'tenders',
+    segment: 'tenders',
+    path: '/dashboard/tenders',
+    isDynamic: false,
+    isCatchAll: false,
+    children: [],
+  },
+],
 };
 
 function flattenTree(node: RouteNode): RouteNode[] {
