@@ -11,6 +11,11 @@ def create_app():
 
     app.config.from_object(Config)
 
+    if not app.config.get("SECRET_KEY"):
+        raise RuntimeError("SECRET_KEY is not set")
+    if not app.config.get("JWT_SECRET_KEY"):
+        raise RuntimeError("JWT_SECRET_KEY is not set")
+
     db.init_app(app)
 
     migrate.init_app(app, db)
