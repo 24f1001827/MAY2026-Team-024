@@ -30,6 +30,9 @@ type Crumb = {
 const ID_LABELS: Record<string, string> = {
   complaints: "Complaint",
   tenders: "Tender",
+  departments: "Department",
+  officers: "Officer",
+  agencies: "Agency",
 }
 
 function idLabel(parentSegment: string | undefined): string {
