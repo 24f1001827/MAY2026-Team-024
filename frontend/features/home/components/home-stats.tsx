@@ -1,10 +1,10 @@
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { IconSvgElement } from "@hugeicons/react"
 import {
-  AlarmClockIcon,
-  CheckmarkCircle02Icon,
-  Ticket01Icon,
-  UserGroupIcon,
+  Megaphone01Icon,
+  Agreement02Icon,
+  CheckmarkBadge02Icon,
+  Building03Icon,
 } from "@hugeicons/core-free-icons"
 
 type Stat = {
@@ -14,10 +14,10 @@ type Stat = {
 }
 
 const STATS: Stat[] = [
-  { icon: Ticket01Icon, value: "1,284", label: "Complaints logged" },
-  { icon: CheckmarkCircle02Icon, value: "94%", label: "Resolution rate" },
-  { icon: AlarmClockIcon, value: "1.8 days", label: "Avg. time to resolve" },
-  { icon: UserGroupIcon, value: "12", label: "Active teams" },
+  { icon: Megaphone01Icon, value: "12,480", label: "Complaints raised" },
+  { icon: Agreement02Icon, value: "3,140", label: "Tenders awarded" },
+  { icon: CheckmarkBadge02Icon, value: "92%", label: "Cases resolved" },
+  { icon: Building03Icon, value: "186", label: "Partner agencies" },
 ]
 
 export function HomeStats() {
