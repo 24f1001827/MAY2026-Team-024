@@ -19,6 +19,9 @@ class AuthProvider(Enum):
     LOCAL = "Local"
     GOOGLE = "Google"
 
+class AssignedBy(Enum):
+    SYSTEM = "System"
+    ADMIN = "Admin"
 
 class AvailabilityStatus(Enum):
     AVAILABLE = "Available"
