@@ -4,6 +4,8 @@ from app.config import Config
 
 from app.extensions import db, migrate, jwt, cors, oauth
 
+from app.models import *
+
 
 def create_app():
 
