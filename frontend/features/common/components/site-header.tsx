@@ -12,7 +12,18 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
       <div className="flex h-16 w-full items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Logo />
+        <div className="flex items-center gap-4 sm:gap-6">
+          <Logo />
+
+          <nav className="hidden items-center gap-1 sm:flex">
+            <Button asChild variant="ghost" size="lg">
+              <Link href={publicRoutes.home}>Home</Link>
+            </Button>
+            <Button asChild variant="ghost" size="lg">
+              <Link href={publicRoutes.complaints}>Search Complaints</Link>
+            </Button>
+          </nav>
+        </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
           <Button

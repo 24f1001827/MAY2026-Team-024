@@ -67,10 +67,15 @@ type ComplaintDetailProps = {
   complaint: Complaint
   citizenName: string
   departmentName: string
-  currentRole: UserRole
-  currentUserId: string
-  currentUserName: string
+  currentRole?: UserRole
+  currentUserId?: string
+  currentUserName?: string
   initialRemarks: ComplaintRemark[]
+  /**
+   * Public read-only view: forces off every edit/manage affordance regardless
+   * of role. Pair with `citizenName="Anonymous"` on public surfaces.
+   */
+  readOnly?: boolean
 }
 
 export function ComplaintDetail({
@@ -81,6 +86,7 @@ export function ComplaintDetail({
   currentUserId,
   currentUserName,
   initialRemarks,
+  readOnly = false,
 }: ComplaintDetailProps) {
   const [status, setStatus] = useState<ComplaintStatus>(complaint.status)
   const [remarks, setRemarks] = useState<ComplaintRemark[]>(initialRemarks)
@@ -89,12 +95,15 @@ export function ComplaintDetail({
   const [postOpen, setPostOpen] = useState(false)
 
   // Admins & citizens can edit the whole complaint; admins, officers, and
-  // agencies can post activity (remarks + status moves).
-  const canEdit = currentRole === "Admin" || currentRole === "Citizen"
+  // agencies can post activity (remarks + status moves). A read-only (public)
+  // view disables both regardless of role.
+  const canEdit =
+    !readOnly && (currentRole === "Admin" || currentRole === "Citizen")
   const canManage =
-    currentRole === "Admin" ||
-    currentRole === "Officer" ||
-    currentRole === "Agency"
+    !readOnly &&
+    (currentRole === "Admin" ||
+      currentRole === "Officer" ||
+      currentRole === "Agency")
 
   // Newest first, regardless of the source ordering.
   const activity = [...remarks].sort((a, b) =>
@@ -116,9 +125,9 @@ export function ComplaintDetail({
     const remark: ComplaintRemark = {
       id: crypto.randomUUID(),
       complaintId: complaint.id,
-      authorId: currentUserId,
-      authorName: currentUserName,
-      authorRole: currentRole,
+      authorId: currentUserId ?? "",
+      authorName: currentUserName ?? "Unknown",
+      authorRole: currentRole ?? "Citizen",
       message: trimmed || `Status moved to ${statusLabel(nextStatus)}.`,
       statusFrom: statusChanged ? status : null,
       statusTo: statusChanged ? nextStatus : null,

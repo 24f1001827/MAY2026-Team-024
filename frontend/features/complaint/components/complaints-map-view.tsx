@@ -14,12 +14,12 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/shadcn/drawer"
-import { routes } from "@/nav"
+import { publicRoutes, routes } from "@/nav"
 import { statusPhase } from "@/lib/utils/complaint/display"
-import { mockComplaints, mockDepartments } from "@/components/shared/mock-data"
 import { ComplaintsMap } from "./complaints-map"
 import { ComplaintsDrawer, type ComplaintFilters } from "./complaints-drawer"
 import type { ComplaintMapItem } from "../../dashboard/components/types"
+import type { Department } from "@/types/department"
 
 const INITIAL_FILTERS: ComplaintFilters = {
   search: "",
@@ -29,23 +29,28 @@ const INITIAL_FILTERS: ComplaintFilters = {
 }
 
 export function ComplaintsMapView({
+  complaints,
+  departments,
   canCreate = false,
+  isPublic = false,
 }: {
+  /** Enrich complaints upstream (server) so this stays a thin, reusable view. */
+  complaints: ComplaintMapItem[]
+  departments: Pick<Department, "id" | "name">[]
   canCreate?: boolean
+  /** Public map: "View details" points at the public read-only detail route. */
+  isPublic?: boolean
 }) {
   const { resolvedTheme } = useTheme()
   const [filters, setFilters] = useState<ComplaintFilters>(INITIAL_FILTERS)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  // Enrich complaints with their department name once.
-  const complaints = useMemo<ComplaintMapItem[]>(() => {
-    const deptName = new Map(mockDepartments.map((d) => [d.id, d.name]))
-    return mockComplaints.map((c) => ({
-      ...c,
-      departmentName: deptName.get(c.departmentId) ?? "Unassigned",
-    }))
-  }, [])
+  // Detail link differs by surface: authed dashboard vs public read-only page.
+  const detailHref = (id: string) =>
+    isPublic
+      ? publicRoutes.complaintDetail(id)
+      : routes.complaints.detail(id).href
 
   const filtered = useMemo(() => {
     const query = filters.search.trim().toLowerCase()
@@ -88,6 +93,7 @@ export function ComplaintsMapView({
         selectedId={visibleSelectedId}
         onSelect={setSelectedId}
         colorScheme={resolvedTheme === "dark" ? "DARK" : "LIGHT"}
+        detailHref={detailHref}
       />
 
       {/* File-a-complaint entry point — only citizens and admins can create. */}
@@ -126,12 +132,13 @@ export function ComplaintsMapView({
           <ComplaintsDrawer
             complaints={filtered}
             totalCount={complaints.length}
-            departments={mockDepartments}
+            departments={departments}
             filters={filters}
             onFiltersChange={setFilters}
             selectedId={visibleSelectedId}
             onSelect={handleSelectFromList}
             onClose={() => setDrawerOpen(false)}
+            detailHref={detailHref}
           />
         </DrawerContent>
       </Drawer>

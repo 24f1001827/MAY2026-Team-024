@@ -13,7 +13,6 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowRight01Icon, MapPinIcon } from "@hugeicons/core-free-icons"
 
-import { routes } from "@/nav"
 import {
   PRIORITY_META,
   statusBadgeClass,
@@ -54,6 +53,7 @@ type ComplaintsMapProps = {
   selectedId: string | null
   onSelect: (id: string | null) => void
   colorScheme: "LIGHT" | "DARK"
+  detailHref: (id: string) => string
 }
 
 export function ComplaintsMap({
@@ -61,6 +61,7 @@ export function ComplaintsMap({
   selectedId,
   onSelect,
   colorScheme,
+  detailHref,
 }: ComplaintsMapProps) {
   if (!API_KEY) {
     return <MapKeyMissing />
@@ -112,7 +113,7 @@ export function ComplaintsMap({
             onCloseClick={() => onSelect(null)}
             headerDisabled
           >
-            <ComplaintInfo complaint={selected} />
+            <ComplaintInfo complaint={selected} detailHref={detailHref} />
           </InfoWindow>
         )}
 
@@ -127,7 +128,13 @@ export function ComplaintsMap({
 // (theme-independent) colors.
 // ---------------------------------------------------------------------------
 
-function ComplaintInfo({ complaint }: { complaint: ComplaintMapItem }) {
+function ComplaintInfo({
+  complaint,
+  detailHref,
+}: {
+  complaint: ComplaintMapItem
+  detailHref: (id: string) => string
+}) {
   return (
     <div className="w-56 font-sans">
       <div className="flex items-center gap-2">
@@ -156,7 +163,7 @@ function ComplaintInfo({ complaint }: { complaint: ComplaintMapItem }) {
         {complaint.address}, {complaint.locality}
       </p>
       <Link
-        href={routes.complaints.detail(complaint.id).href}
+        href={detailHref(complaint.id)}
         className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-sky-600 hover:text-sky-700"
       >
         View details
