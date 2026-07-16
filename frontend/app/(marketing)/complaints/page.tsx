@@ -5,7 +5,7 @@ import { getPublicComplaints } from "@/lib/utils/complaint/public-complaints"
 import { ComplaintsMapView } from "@/features/complaint/components/complaints-map-view"
 
 export const metadata: Metadata = {
-  title: "Public complaints map",
+  title: "Complaints Search",
   description:
     "Browse civic complaints reported across the city. Reporter identities are kept anonymous.",
 }

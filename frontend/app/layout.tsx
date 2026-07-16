@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Rastro — Complaint Tracking",
+  title: "Rastro Console",
   description: "Log, track, and resolve complaints from submission to resolution.",
 };
 
