@@ -19,7 +19,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/shadcn/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { routes } from "@/nav"
 import {
   PHASE_META,
   PHASE_ORDER,
@@ -50,6 +49,7 @@ type ComplaintsDrawerProps = {
   selectedId: string | null
   onSelect: (id: string) => void
   onClose: () => void
+  detailHref: (id: string) => string
 }
 
 function Chip({
@@ -86,6 +86,7 @@ export function ComplaintsDrawer({
   selectedId,
   onSelect,
   onClose,
+  detailHref,
 }: ComplaintsDrawerProps) {
   const set = (patch: Partial<ComplaintFilters>) =>
     onFiltersChange({ ...filters, ...patch })
@@ -310,7 +311,7 @@ export function ComplaintsDrawer({
                     </button>
 
                     <Link
-                      href={routes.complaints.detail(complaint.id).href}
+                      href={detailHref(complaint.id)}
                       className="flex items-center justify-between border-t border-border px-3 py-2 text-xs font-medium text-brand transition-colors hover:bg-accent"
                     >
                       View details
