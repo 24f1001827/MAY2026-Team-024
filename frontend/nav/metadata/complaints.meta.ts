@@ -29,4 +29,9 @@ export const complaintsMetadata: MetadataRegistry = {
     label: "Complaint",
     breadcrumb: "Details",
   },
+  "complaints-[id]-edit": {
+    label: "Edit complaint",
+    breadcrumb: "Edit",
+    access: { allowRoles: ["citizen", "admin"] },
+  },
 }
