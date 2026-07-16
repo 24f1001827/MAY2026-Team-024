@@ -167,6 +167,7 @@ export function ComplaintForm({
           <IndiaIssueLocationForm
             defaultValue={{
               state: complaint?.state,
+              district: complaint?.district,
               city: complaint?.city,
               pincode: complaint?.pincode,
             }}
