@@ -1,8 +1,12 @@
 import { cookies } from "next/headers"
 
-
-import { mockUsers } from "@/components/shared/mock-data"
+import {
+  mockComplaints,
+  mockDepartments,
+  mockUsers,
+} from "@/components/shared/mock-data"
 import { MOCK_SESSION_COOKIE } from "@/lib/auth/mock-session"
+import { enrichComplaints } from "@/lib/utils/complaint/public-complaints"
 import { ComplaintsMapView } from "@/features/complaint/components/complaints-map-view"
 
 export default async function ComplaintsPage() {
@@ -13,11 +17,17 @@ export default async function ComplaintsPage() {
   // Only citizens and admins can file a complaint.
   const canCreate = user?.role === "Citizen" || user?.role === "Admin"
 
+  const complaints = enrichComplaints(mockComplaints, mockDepartments)
+
   // Full-bleed map: cancel the layout's <main> padding and fill the viewport
   // below the 4rem (h-16) dashboard header.
   return (
     <div className="-m-4 h-[calc(100svh-4rem)] sm:-m-6 lg:-m-8">
-      <ComplaintsMapView canCreate={canCreate} />
+      <ComplaintsMapView
+        complaints={complaints}
+        departments={mockDepartments}
+        canCreate={canCreate}
+      />
     </div>
   )
 }
