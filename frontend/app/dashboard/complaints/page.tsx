@@ -1,8 +1,9 @@
 import { cookies } from "next/headers"
 
-import { ComplaintsMapView } from "@/features/dashboard/components/complaints-map-view"
+
 import { mockUsers } from "@/components/shared/mock-data"
 import { MOCK_SESSION_COOKIE } from "@/lib/auth/mock-session"
+import { ComplaintsMapView } from "@/features/complaint/components/complaints-map-view"
 
 export default async function ComplaintsPage() {
   const store = await cookies()
