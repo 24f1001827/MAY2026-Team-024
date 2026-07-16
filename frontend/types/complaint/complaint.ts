@@ -51,8 +51,10 @@ export interface Complaint {
   address: string
   locality: string
   city: string
+  district: string
   state: string
   pincode: string
+  country: string
   aiCategory: string | null
   aiPriorityScore: number | null
   createdAt: string
@@ -68,6 +70,8 @@ export interface CreateComplaintInput {
   address: string
   locality: string
   city: string
+  district: string
   state: string
   pincode: string
+  country: string
 }

@@ -297,7 +297,7 @@ export function ComplaintDetail({
             <p className="mt-1 text-sm text-muted-foreground">
               {complaint.locality}, {complaint.city}
               <br />
-              {complaint.state} {complaint.pincode}
+              {complaint.district}, {complaint.state} {complaint.pincode}
             </p>
           </InfoCard>
 
