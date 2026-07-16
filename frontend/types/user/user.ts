@@ -8,19 +8,19 @@ export type UserRole = "Citizen" | "Officer" | "Admin" | "Agency"
 
 export type UserStatus = "PendingApproval" | "Active" | "Rejected" | "Blocked"
 
-export const USER_ROLES: readonly UserRole[] = [
+export const USER_ROLES = [
   "Citizen",
   "Officer",
   "Admin",
   "Agency",
-]
+] as const satisfies UserRole[]
 
-export const USER_STATUSES: readonly UserStatus[] = [
+export const USER_STATUSES = [
   "PendingApproval",
   "Active",
   "Rejected",
   "Blocked",
-]
+] as const satisfies UserStatus[]
 
 export interface User {
   id: string // uuid
@@ -28,7 +28,7 @@ export interface User {
   email: string
   phone: string
   /** Server-side only — never sent to the browser in real responses. */
-  passwordHash: string
+  passwordHash?: string
   /** Auth provider, e.g. "local" | "google". */
   provider: string | null
   providerId: string | null

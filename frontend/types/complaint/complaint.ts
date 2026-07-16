@@ -10,7 +10,7 @@ export type ComplaintStatus =
   | "AwaitingBudget"
   | "BudgetAllocated"
   | "TenderNotificationIssued"
-  | "TenderAlloted"
+  | "TenderAllotted"
   | "WorkInProgress"
   | "Resolved"
   | "Closed"
@@ -25,7 +25,7 @@ export const COMPLAINT_STATUSES: readonly ComplaintStatus[] = [
   "AwaitingBudget",
   "BudgetAllocated",
   "TenderNotificationIssued",
-  "TenderAlloted",
+  "TenderAllotted",
   "WorkInProgress",
   "Resolved",
   "Closed",

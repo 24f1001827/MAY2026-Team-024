@@ -13,7 +13,7 @@ export const mockUsers: User[] = [
     name: "Aarav Menon",
     email: "admin@rastro.gov",
     phone: "+919800000001",
-    passwordHash: "$2b$10$mockhashadmin000000000000000000000000000000000", // password: Admin@123
+    passwordHash: "$2b$10$mockhashadmin000000000000000000000000000000000",
     provider: "local",
     providerId: null,
     role: "Admin",
@@ -27,7 +27,7 @@ export const mockUsers: User[] = [
     name: "Priya Nair",
     email: "priya.nair@rastro.gov",
     phone: "+919800000002",
-    passwordHash: "$2b$10$mockhashofficer00000000000000000000000000000000", // password: Officer@123
+    passwordHash: "$2b$10$mockhashofficer00000000000000000000000000000000",
     provider: "local",
     providerId: null,
     role: "Officer",
@@ -41,7 +41,7 @@ export const mockUsers: User[] = [
     name: "Rahul Verma",
     email: "rahul.verma@rastro.gov",
     phone: "+919800000003",
-    passwordHash: "$2b$10$mockhashofficer11111111111111111111111111111111", // password: Officer@123
+    passwordHash: "$2b$10$mockhashofficer11111111111111111111111111111111",
     provider: "local",
     providerId: null,
     role: "Officer",
@@ -55,7 +55,7 @@ export const mockUsers: User[] = [
     name: "Sneha Iyer",
     email: "sneha.iyer@example.com",
     phone: "+919800000004",
-    passwordHash: "$2b$10$mockhashcitizen00000000000000000000000000000000", // password: Citizen@123
+    passwordHash: "$2b$10$mockhashcitizen00000000000000000000000000000000",
     provider: "local",
     providerId: null,
     role: "Citizen",
@@ -69,7 +69,7 @@ export const mockUsers: User[] = [
     name: "Mohammed Ali",
     email: "m.ali@example.com",
     phone: "+919800000005",
-    passwordHash: "$2b$10$mockhashcitizen11111111111111111111111111111111", // password: Citizen@123 (also has Google login)
+    passwordHash: "$2b$10$mockhashcitizen11111111111111111111111111111111", // also has Google login
     provider: "google",
     providerId: "google-oauth2|1078540023145",
     role: "Citizen",
@@ -83,7 +83,7 @@ export const mockUsers: User[] = [
     name: "Divya Krishnan",
     email: "divya.k@example.com",
     phone: "+919800000006",
-    passwordHash: "$2b$10$mockhashcitizen22222222222222222222222222222222", // password: Citizen@123
+    passwordHash: "$2b$10$mockhashcitizen22222222222222222222222222222222",
     provider: "local",
     providerId: null,
     role: "Citizen",
@@ -97,7 +97,7 @@ export const mockUsers: User[] = [
     name: "BuildRight Infra Pvt Ltd",
     email: "contact@buildright.co.in",
     phone: "+919800000007",
-    passwordHash: "$2b$10$mockhashagency000000000000000000000000000000000", // password: Agency@123
+    passwordHash: "$2b$10$mockhashagency000000000000000000000000000000000",
     provider: "local",
     providerId: null,
     role: "Agency",
@@ -111,7 +111,7 @@ export const mockUsers: User[] = [
     name: "UrbanWorks Constructions",
     email: "hello@urbanworks.in",
     phone: "+919800000008",
-    passwordHash: "$2b$10$mockhashagency111111111111111111111111111111111", // password: Agency@123
+    passwordHash: "$2b$10$mockhashagency111111111111111111111111111111111",
     provider: "local",
     providerId: null,
     role: "Agency",
