@@ -5,7 +5,7 @@
  * Run `bun routes:generate` to regenerate from the filesystem.
  *
  * Source: app/dashboard (scanned recursively)
- * Generated: 2026-07-10
+ * Generated: 2026-07-16
  */
 
 import type { RouteNode } from '../types';
@@ -31,7 +31,34 @@ export const ROUTE_TREE: RouteNode = {
     path: '/dashboard/complaints',
     isDynamic: false,
     isCatchAll: false,
-    children: [],
+    children: [
+      {
+        id: 'complaints-new',
+        segment: 'new',
+        path: '/dashboard/complaints/new',
+        isDynamic: false,
+        isCatchAll: false,
+        children: [],
+      },
+      {
+        id: 'complaints-[id]',
+        segment: '[id]',
+        path: '/dashboard/complaints/[id]',
+        isDynamic: true,
+        isCatchAll: false,
+        paramName: 'id',
+        children: [
+            {
+              id: 'complaints-[id]-edit',
+              segment: 'edit',
+              path: '/dashboard/complaints/[id]/edit',
+              isDynamic: false,
+              isCatchAll: false,
+              children: [],
+            },
+          ],
+      },
+    ],
   },
   {
     id: 'departments',
