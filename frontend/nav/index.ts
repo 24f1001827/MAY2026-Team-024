@@ -155,6 +155,10 @@ export const publicRoutes = {
   about: "/about",
   support: "/support",
   contact: "/contact",
+  /** Public, unauthenticated complaints map (reporters shown anonymized). */
+  complaints: "/complaints",
+  /** Public read-only detail for a single complaint. */
+  complaintDetail: (id: string) => `/complaints/${id}`,
 } as const
 
 export type PublicRoutes = typeof publicRoutes
