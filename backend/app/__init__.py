@@ -6,7 +6,6 @@ from app.extensions import db, migrate, jwt, cors, oauth
 
 from app.models import *
 
-
 def create_app():
 
     app = Flask(__name__)
