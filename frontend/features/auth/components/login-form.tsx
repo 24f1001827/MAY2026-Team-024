@@ -13,6 +13,7 @@ import {
 
 import { Button } from "@/components/shadcn/button"
 import { Input } from "@/components/shadcn/input"
+import { Checkbox } from "@/components/shadcn/checkbox"
 import { AuthShell, AuthAside } from "@/features/auth/components/auth-shell"
 import { mockUsers } from "@/components/shared/mock-data"
 import { setMockSession } from "@/lib/auth/mock-session"
@@ -129,11 +130,7 @@ export function LoginForm() {
           </div>
 
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <input
-              type="checkbox"
-              name="remember"
-              className="size-4 rounded border-border accent-[var(--brand)]"
-            />
+            <Checkbox name="remember" />
             Remember me
           </label>
 
