@@ -18,6 +18,7 @@ import type { IconSvgElement } from "@hugeicons/react"
 
 import { Button } from "@/components/shadcn/button"
 import { Input } from "@/components/shadcn/input"
+import { NativeSelect } from "@/components/shadcn/native-select"
 import { AuthShell, AuthAside } from "@/features/auth/components/auth-shell"
 import { mockDepartments } from "@/components/shared/mock-data"
 import { toast } from "@/lib/styles/toast-styles"
@@ -188,12 +189,11 @@ export function RegisterForm({ role }: { role: RegisterRole }) {
 
           {role === "Officer" && (
             <Field label="Department" htmlFor="departmentId">
-              <select
+              <NativeSelect
                 id="departmentId"
                 name="departmentId"
                 required
                 defaultValue=""
-                className="flex h-10 w-full rounded-md border border-border bg-transparent px-3 text-sm text-foreground outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
               >
                 <option value="" disabled>
                   Select a department
@@ -203,7 +203,7 @@ export function RegisterForm({ role }: { role: RegisterRole }) {
                     {department.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </Field>
           )}
 
