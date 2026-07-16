@@ -74,7 +74,7 @@ export function CreatablePincode({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          disabled={disabled}
+          disabled={disabled || loading}
           className={cn(
             "h-10 w-full justify-between font-normal",
             !value && "text-muted-foreground"

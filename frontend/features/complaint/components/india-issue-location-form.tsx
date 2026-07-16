@@ -168,16 +168,29 @@ export function IndiaIssueLocationForm({
   const [cities, setCities] = useState<string[]>([])
   const [pincodes, setPincodes] = useState<string[]>([])
 
-  const [loadingDistricts, setLoadingDistricts] = useState(false)
-  const [loadingCities, setLoadingCities] = useState(false)
-  const [loadingPincodes, setLoadingPincodes] = useState(false)
+  // Seed loading from the pre-filled path (edit flow) so each child combobox
+  // reads as loading — not "enabled but empty" — until its mount fetch lands.
+  const [loadingDistricts, setLoadingDistricts] = useState(
+    Boolean(defaultValue?.state)
+  )
+  const [loadingCities, setLoadingCities] = useState(
+    Boolean(defaultValue?.state && defaultValue?.district)
+  )
+  const [loadingPincodes, setLoadingPincodes] = useState(
+    Boolean(
+      defaultValue?.state && defaultValue?.district && defaultValue?.city
+    )
+  )
 
-  // Each level fetches its children whenever its path changes. The guards keep
-  // setState out of the synchronous effect body (only the async resolution
-  // updates state); downstream lists are cleared eagerly in the handlers below.
+  // Each level fetches its children whenever its path changes. Guards keep
+  // setState out of the synchronous effect body; loading is raised by the
+  // handlers (user edits) or the initial state above (pre-fill), and always
+  // cleared in `finally` so a rejected action can't leave a combobox stuck.
   useEffect(() => {
     let active = true
-    getStates().then((next) => active && setStates(next))
+    getStates()
+      .then((next) => active && setStates(next))
+      .catch(() => active && setStates([]))
     return () => {
       active = false
     }
@@ -186,11 +199,10 @@ export function IndiaIssueLocationForm({
   useEffect(() => {
     if (!state) return
     let active = true
-    getDistricts(state).then((next) => {
-      if (!active) return
-      setDistricts(next)
-      setLoadingDistricts(false)
-    })
+    getDistricts(state)
+      .then((next) => active && setDistricts(next))
+      .catch(() => active && setDistricts([]))
+      .finally(() => active && setLoadingDistricts(false))
     return () => {
       active = false
     }
@@ -199,11 +211,10 @@ export function IndiaIssueLocationForm({
   useEffect(() => {
     if (!state || !district) return
     let active = true
-    getCities(state, district).then((next) => {
-      if (!active) return
-      setCities(next)
-      setLoadingCities(false)
-    })
+    getCities(state, district)
+      .then((next) => active && setCities(next))
+      .catch(() => active && setCities([]))
+      .finally(() => active && setLoadingCities(false))
     return () => {
       active = false
     }
@@ -212,11 +223,10 @@ export function IndiaIssueLocationForm({
   useEffect(() => {
     if (!state || !district || !city) return
     let active = true
-    getPincodes(state, district, city).then((next) => {
-      if (!active) return
-      setPincodes(next)
-      setLoadingPincodes(false)
-    })
+    getPincodes(state, district, city)
+      .then((next) => active && setPincodes(next))
+      .catch(() => active && setPincodes([]))
+      .finally(() => active && setLoadingPincodes(false))
     return () => {
       active = false
     }
