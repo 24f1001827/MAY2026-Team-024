@@ -7,6 +7,7 @@ export const mockDepartments: Department[] = [
     name: "Public Works",
     description: "Roads, drainage, footpaths, and public infrastructure.",
     budget: 25000000,
+    headOfficerId: "22222222-2222-4222-8222-222222222222", // Priya Nair
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-06-01T10:00:00.000Z",
   },
@@ -15,6 +16,7 @@ export const mockDepartments: Department[] = [
     name: "Water Supply",
     description: "Pipeline maintenance, leakages, and water quality issues.",
     budget: 18000000,
+    headOfficerId: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-05-12T10:00:00.000Z",
   },
@@ -23,6 +25,7 @@ export const mockDepartments: Department[] = [
     name: "Sanitation",
     description: "Waste collection, sewage, and public cleanliness.",
     budget: 14500000,
+    headOfficerId: "33333333-3333-4333-8333-333333333333", // Rahul Verma
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-06-18T10:00:00.000Z",
   },
@@ -31,6 +34,7 @@ export const mockDepartments: Department[] = [
     name: "Street Lighting",
     description: "Installation and repair of public lighting.",
     budget: 6200000,
+    headOfficerId: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-04-30T10:00:00.000Z",
   },
