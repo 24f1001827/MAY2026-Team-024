@@ -1,12 +1,18 @@
 import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
 
 import { mockUsers } from "@/components/shared/mock-data"
 import { MOCK_SESSION_COOKIE } from "@/lib/auth/mock-session"
+import { routes } from "@/nav"
 
 export default async function DashboardPage() {
   const cookieStore = await cookies()
   const uid = cookieStore.get(MOCK_SESSION_COOKIE)?.value
   const currentUser = mockUsers.find((u) => u.id === uid)
+
+  // Officers work out of their department dashboard, not the generic home.
+  if (currentUser?.role === "Officer") redirect(routes.department)
+
   const firstName = currentUser?.name.split(" ")[0] ?? "there"
 
   return (
