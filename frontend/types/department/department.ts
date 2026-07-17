@@ -7,6 +7,12 @@ export interface Department {
   name: string
   description: string
   budget: number
+  /**
+   * The department head — an officer (users.id) who triages the department's
+   * complaint queue and allots cases to officers. `null` until an admin
+   * designates one.
+   */
+  headOfficerId: string | null
   createdAt: string
   updatedAt: string
 }

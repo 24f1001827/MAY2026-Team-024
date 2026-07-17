@@ -44,6 +44,11 @@ export interface Complaint {
   description: string
   citizenId: string // FK to users.id
   departmentId: number // FK to departments.id
+  /**
+   * The officer (users.id / officers.userId) this complaint is allotted to, or
+   * `null` while it waits in the department's unassigned queue.
+   */
+  assignedOfficerId: string | null
   priority: ComplaintPriority
   status: ComplaintStatus
   latitude: number | null
