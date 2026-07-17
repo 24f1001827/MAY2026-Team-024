@@ -29,7 +29,7 @@ export function RegisterMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="brand" size="lg">
+        <Button variant="brand" size="lg" className="group/button">
           Register
           <HugeiconsIcon
             icon={ArrowDown01Icon}

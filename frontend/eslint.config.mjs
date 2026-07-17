@@ -35,7 +35,7 @@ const eslintConfig = defineConfig([
           selector:
             "JSXAttribute[name.name='href'] TemplateLiteral > TemplateElement:first-child[value.raw=/^\\//]",
           message:
-            "Don't hardcode internal paths in `href`. Use the '@/nav' `routes` builder (e.g. routes.complaints.detail(id).href).",
+            "Don't hardcode internal paths in `href`. Use the '@/nav' route helpers (e.g. routes.complaints).",
         },
         {
           selector:
