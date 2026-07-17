@@ -7,7 +7,6 @@
 import { DashboardSquare01Icon } from "@hugeicons/core-free-icons"
 
 import type { MetadataRegistry } from "../types"
-import { OPEN_ACCESS } from "../access/roles"
 
 export const rootMetadata: MetadataRegistry = {
   dashboard: {
@@ -15,6 +14,9 @@ export const rootMetadata: MetadataRegistry = {
     icon: DashboardSquare01Icon,
     description: "Your Rastro overview.",
     order: 0,
-    access: OPEN_ACCESS,
+    // Officers are redirected from the home page to their department dashboard,
+    // so the generic "Dashboard" item is redundant for them — hide it. Their
+    // entry point is "Department" (`/dashboard/department`).
+    access: { denyRoles: ["officer", "citizen"] },
   },
 }
