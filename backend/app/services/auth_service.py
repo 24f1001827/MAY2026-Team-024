@@ -107,4 +107,47 @@ class AuthService:
 
         return AuthService._login_user(user)
 
-    
+    @staticmethod
+    def google_login(user_info):
+        """
+        Log in (or implicitly register) a user via Google OAuth.
+ 
+        Looks up the local user by the email Google returned. If no
+        user exists yet, a new CITIZEN account is created automatically
+        with AuthProvider.GOOGLE and ACTIVE status — no separate
+        registration step needed, since Google has already verified
+        the email address.
+ 
+        Args:
+            user_info: dict from Google's userinfo/ID token, expected
+                to contain "email", "name", and "sub" (Google's
+                stable unique user ID, stored as provider_id).
+ 
+        Raises:
+            ValueError: if an account with this email already exists
+                under a different provider (LOCAL) — prevents
+                silently taking over a password-based account just
+                because someone controls the matching Gmail address.
+        """
+ 
+        user = UserRepository.get_by_email(user_info["email"])
+ 
+        if user and user.provider != AuthProvider.GOOGLE:
+            raise ValueError(
+                "An account with this email already exists. "
+                "Please log in using your original sign-in method."
+            )
+ 
+        if not user:
+            user = User(
+                name=user_info["name"],
+                email=user_info["email"],
+                provider=AuthProvider.GOOGLE,
+                provider_id=user_info["sub"],
+                role=UserRole.CITIZEN,
+                status=UserStatus.ACTIVE,
+            )
+ 
+            user = UserRepository.create(user)
+ 
+        return AuthService._login_user(user)
