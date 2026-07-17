@@ -2,7 +2,7 @@
 Auth routes: citizen registration and email/password login.
 """
 
-from flask import Blueprint, jsonify, request, url_for
+from flask import Blueprint, jsonify, request, url_for,redirect
 
 from marshmallow import ValidationError
 
@@ -166,3 +166,120 @@ def login():
             ),
             500,
         )
+
+@auth_bp.get("/google/login")
+def google_login():
+    """
+    Redirect the user to Google's OAuth 2.0 consent screen.
+ 
+    This is the entry point for "Login with Google" — the frontend
+    should navigate the browser here directly (not call it via
+    fetch/AJAX), since Google needs to redirect the actual browser,
+    not just return JSON to a background request.
+    """
+ 
+    redirect_uri = url_for(
+        "auth.google_callback",
+        _external=True,
+    )
+ 
+    return oauth.google.authorize_redirect(
+        redirect_uri,
+        prompt="consent",  # forces the consent screen every time,
+                            # instead of Google silently re-authorizing
+                            # returning users
+    )
+ 
+ 
+@auth_bp.get("/google/callback")
+def google_callback():
+    """
+    Handle Google's redirect back after the user grants consent.
+ 
+    Exchanges the authorization code for a token, extracts the
+    user's profile (email, name, sub), and delegates to
+    AuthService.google_login to find-or-create the local User and
+    issue app-level access/refresh tokens.
+ 
+    Responses:
+        200: login successful, returns user info + access/refresh tokens.
+        401: token exchange with Google failed (e.g. user denied consent).
+        400: Google didn't return a usable email/profile.
+        409: an account with this email already exists under a
+             different provider.
+        500: unexpected server error while creating/logging in the user.
+    """
+ 
+    try:
+        token = oauth.google.authorize_access_token()
+    except Exception as err:
+ 
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Google authentication failed.",
+                    "error": str(err),
+                }
+            ),
+            401,
+        )
+ 
+    # userinfo is usually embedded in the token response; fall back
+    # to the userinfo endpoint if a given scope/flow omits it
+    user_info = token.get("userinfo")
+ 
+    if not user_info:
+        user_info = oauth.google.userinfo(token=token)
+ 
+    if not user_info or not user_info.get("email"):
+ 
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Could not retrieve account details from Google.",
+                }
+            ),
+            400,
+        )
+ 
+    try:
+        response = AuthService.google_login(user_info)
+    except ValueError as err:
+ 
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            409,
+        )
+ 
+    except Exception as err:
+ 
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+ 
+    return (
+        jsonify(
+            {
+                "success": True,
+                "message": "Login successful.",
+                "data": response,
+            }
+        ),
+        200,
+    )
+    
+            

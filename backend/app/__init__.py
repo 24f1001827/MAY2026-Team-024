@@ -8,6 +8,8 @@ from app.models import *
 
 from app.routes import auth_bp
 
+from app.extensions import init_google_oauth
+
 
 def create_app():
 
@@ -29,6 +31,8 @@ def create_app():
     cors.init_app(app)
 
     oauth.init_app(app)
+
+    init_google_oauth(app)
 
     # ------------------------
     # Blueprint Registration
