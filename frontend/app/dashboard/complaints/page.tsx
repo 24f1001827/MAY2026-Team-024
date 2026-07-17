@@ -17,7 +17,16 @@ export default async function ComplaintsPage() {
   // Only citizens and admins can file a complaint.
   const canCreate = user?.role === "Citizen" || user?.role === "Admin"
 
-  const complaints = enrichComplaints(mockComplaints, mockDepartments)
+  // Officers see only complaints allotted to them, citizens only the ones they
+  // filed; admins (and agencies) see all.
+  const visibleComplaints =
+    user?.role === "Officer"
+      ? mockComplaints.filter((c) => c.assignedOfficerId === user.id)
+      : user?.role === "Citizen"
+        ? mockComplaints.filter((c) => c.citizenId === user.id)
+        : mockComplaints
+
+  const complaints = enrichComplaints(visibleComplaints, mockDepartments)
 
   // Full-bleed map: cancel the layout's <main> padding and fill the viewport
   // below the 4rem (h-16) dashboard header.

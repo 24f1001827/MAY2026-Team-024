@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -39,6 +40,9 @@ export type ComplaintFilters = {
   phase: ComplaintPhase | "all"
   departmentId: number | "all"
 }
+
+/** How many complaints to render initially, and per "Load more" click. */
+const PAGE_SIZE = 20
 
 type ComplaintsDrawerProps = {
   complaints: ComplaintMapItem[]
@@ -91,6 +95,16 @@ export function ComplaintsDrawer({
   const set = (patch: Partial<ComplaintFilters>) =>
     onFiltersChange({ ...filters, ...patch })
 
+  // Windowed rendering so a huge result set doesn't mount thousands of rows at
+  // once. Reset back to the first page whenever the filters change.
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [filters])
+
+  const visible = complaints.slice(0, visibleCount)
+  const remaining = complaints.length - visible.length
+
   const activeDept =
     filters.departmentId === "all"
       ? "All departments"
@@ -111,7 +125,7 @@ export function ComplaintsDrawer({
           <div>
             <h2 className="text-sm font-semibold text-foreground">Complaints</h2>
             <p className="text-xs text-muted-foreground">
-              {complaints.length} of {totalCount} shown
+              {complaints.length} of {totalCount} match
             </p>
           </div>
           <Button
@@ -248,7 +262,7 @@ export function ComplaintsDrawer({
           </div>
         ) : (
           <ul className="space-y-1.5">
-            {complaints.map((complaint) => {
+            {visible.map((complaint) => {
               const selected = complaint.id === selectedId
               return (
                 <li key={complaint.id}>
@@ -322,6 +336,23 @@ export function ComplaintsDrawer({
               )
             })}
           </ul>
+        )}
+
+        {remaining > 0 && (
+          <div className="p-2 pt-3">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() =>
+                setVisibleCount((count) => count + PAGE_SIZE)
+              }
+            >
+              Load more
+              <span className="text-muted-foreground">
+                ({remaining} more)
+              </span>
+            </Button>
+          </div>
         )}
       </div>
     </div>
