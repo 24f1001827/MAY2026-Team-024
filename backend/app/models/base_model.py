@@ -9,6 +9,6 @@ class BaseModel(db.Model):
     __abstract__ =True
 
     created_at=db.Column(db.DateTime(timezone=True),default=lambda:datetime.now(IST),nullable=False)
-    updated_at=db.Column(db.DateTime(timezone=True),default=lambda:datetime.now(IST),nullable=False)
+    updated_at=db.Column(db.DateTime(timezone=True),default=lambda:datetime.now(IST),onupdate=lambda:datetime.now(IST),nullable=False)
     deleted_at=db.Column(db.DateTime)
 
