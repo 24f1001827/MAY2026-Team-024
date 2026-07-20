@@ -96,6 +96,9 @@ class AuthService:
         if not user:
             raise ValueError("Invalid email or password.")
 
+        if user.provider != AuthProvider.LOCAL or not user.password_hash:
+            raise ValueError("Invalid email or password.")
+
         if not verify_password(
             data["password"],
             user.password_hash,
