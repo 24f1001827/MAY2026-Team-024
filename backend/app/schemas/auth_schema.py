@@ -90,7 +90,109 @@ class RegisterCitizenSchema(Schema):
                 "Password must contain at least one special character."
             )
 
+class RegisterAgencySchema(Schema):
+    """
+    Schema for agency registration.
+    """
 
+    name = fields.String(required=True)
+    email = fields.Email(required=True)
+    password = fields.String(required=True, load_only=True)
+    phone = fields.String(required=True)
+
+    registration_number = fields.String(required=True)
+    license_number = fields.String(required=True)
+    contact_person = fields.String(required=True)
+
+    @validates("password")
+    def validate_password(self, value, **kwargs):
+        """
+        Validate password strength.
+        """
+
+        if len(value) < 8:
+            raise ValidationError(
+                "Password must be at least 8 characters long."
+            )
+
+        if not re.search(r"[A-Z]", value):
+            raise ValidationError(
+                "Password must contain at least one uppercase letter."
+            )
+
+        if not re.search(r"[a-z]", value):
+            raise ValidationError(
+                "Password must contain at least one lowercase letter."
+            )
+
+        if not re.search(r"\d", value):
+            raise ValidationError(
+                "Password must contain at least one digit."
+            )
+
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", value):
+            raise ValidationError(
+                "Password must contain at least one special character."
+            )
+
+    @validates("phone")
+    def validate_phone(self, value, **kwargs):
+        """
+        Validate Indian mobile number.
+        """
+
+        if not re.fullmatch(r"^[6-9]\d{9}$", value):
+            raise ValidationError(
+                "Invalid phone number."
+            )
+
+    @validates("registration_number")
+    def validate_registration_number(self, value, **kwargs):
+        """
+        Validate registration number.
+        """
+
+        if len(value.strip()) == 0:
+            raise ValidationError(
+                "Registration number is required."
+            )
+
+        if len(value) > 100:
+            raise ValidationError(
+                "Registration number cannot exceed 100 characters."
+            )
+
+    @validates("license_number")
+    def validate_license_number(self, value, **kwargs):
+        """
+        Validate license number.
+        """
+
+        if len(value.strip()) == 0:
+            raise ValidationError(
+                "License number is required."
+            )
+
+        if len(value) > 100:
+            raise ValidationError(
+                "License number cannot exceed 100 characters."
+            )
+
+    @validates("contact_person")
+    def validate_contact_person(self, value, **kwargs):
+        """
+        Validate contact person.
+        """
+
+        if len(value.strip()) < 2:
+            raise ValidationError(
+                "Contact person name is too short."
+            )
+
+        if len(value) > 100:
+            raise ValidationError(
+                "Contact person name cannot exceed 100 characters."
+            )
 
 
 class LoginSchema(Schema):
