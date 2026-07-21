@@ -110,6 +110,7 @@ def register_agency():
         201: agency registered successfully.
         422: request body failed schema validation.
         409: email/registration/license already exists.
+        401
         500: unexpected server error.
     """
 
@@ -164,6 +165,18 @@ def register_agency():
                 }
             ),
             409,
+        )
+    
+    except PermissionError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            403,
         )
 
     except Exception as err:
