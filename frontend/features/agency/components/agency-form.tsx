@@ -7,6 +7,7 @@ import { Input } from "@/components/shadcn/input"
 import { Label } from "@/components/shadcn/label"
 import { toast } from "@/lib/styles/toast-styles"
 import { routes } from "@/nav"
+import type { CreateAgencyRequest } from "@/types/agency"
 import type { AgencyView } from "./agency-list"
 
 /** Shared `id` linking the header's submit button to this form. */
@@ -41,14 +42,30 @@ export function AgencyForm({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    // Collect the form into a typed payload, ready to POST/PATCH once the
+    // backend lands. Native `required` + input types handle basic validation.
+    const data = new FormData(event.currentTarget)
+    const input: CreateAgencyRequest = {
+      name: String(data.get("name") ?? "").trim(),
+      contactPerson: String(data.get("contactPerson") ?? "").trim(),
+      email: String(data.get("email") ?? "").trim(),
+      phone: String(data.get("phone") ?? "").trim(),
+      registrationNumber: String(data.get("registrationNumber") ?? "").trim(),
+      licenseNumber: String(data.get("licenseNumber") ?? "").trim(),
+      maxProjects: Number(data.get("maxProjects") ?? 0),
+    }
+
     if (isEdit && agency) {
+      // TODO(backend): PATCH agencies/:id with { id: agency.id, ...input } (UpdateAgencyInput).
       toast.success("Agency updated", {
-        description: "Your changes have been saved.",
+        description: `Your changes to ${input.name} have been saved.`,
       })
       router.push(routes.agencies.detail(agency.id).href)
     } else {
+      // TODO(backend): POST agencies with `input` (CreateAgencyInput).
       toast.success("Agency registered", {
-        description: "The agency has been added.",
+        description: `${input.name} has been added.`,
       })
       router.push(routes.agencies.href)
     }
