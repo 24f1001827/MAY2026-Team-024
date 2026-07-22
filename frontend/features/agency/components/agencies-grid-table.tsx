@@ -20,7 +20,6 @@ import {
   CardTitle,
 } from "@/components/shadcn/card"
 import { Button } from "@/components/shadcn/button"
-import { Badge } from "@/components/shadcn/badge"
 import { Input } from "@/components/shadcn/input"
 import {
   Empty,
