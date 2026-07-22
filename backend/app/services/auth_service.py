@@ -3,9 +3,15 @@ from app.models import (
     UserRole,
     UserStatus,
     AuthProvider,
+    AvailabilityStatus
 )
 
-from app.repositories import UserRepository, AgencyRepository
+from app.repositories import (
+    UserRepository,
+    AgencyRepository,
+    OfficerRepository,
+    DepartmentRepository
+)
 from app.extensions import db
 
 from app.utils import (
@@ -52,7 +58,6 @@ class AuthService:
 
         return UserRepository.create(user)
 
-
     @staticmethod
     def register_agency(data):
         """
@@ -72,19 +77,11 @@ class AuthService:
         if UserRepository.get_by_email(data["email"]):
             raise ValueError("Email already registered.")
 
-        if AgencyRepository.get_by_registration_number(
-            data["registration_number"]
-        ):
-            raise ValueError(
-                "Registration number already exists."
-            )
+        if AgencyRepository.get_by_registration_number(data["registration_number"]):
+            raise ValueError("Registration number already exists.")
 
-        if AgencyRepository.get_by_license_number(
-            data["license_number"]
-        ):
-            raise ValueError(
-                "License number already exists."
-            )
+        if AgencyRepository.get_by_license_number(data["license_number"]):
+            raise ValueError("License number already exists.")
 
         try:
 
@@ -92,9 +89,7 @@ class AuthService:
                 User(
                     name=data["name"],
                     email=data["email"],
-                    password=hash_password(
-                        data["password"]
-                    ),
+                    password=hash_password(data["password"]),
                     phone=data["phone"],
                     role=UserRole.AGENCY,
                     status=UserStatus.PENDING_APPROVAL,
@@ -104,15 +99,57 @@ class AuthService:
             AgencyRepository.create(
                 {
                     "user_id": user.id,
-                    "registration_number": data[
-                        "registration_number"
-                    ],
-                    "license_number": data[
-                        "license_number"
-                    ],
-                    "contact_person": data[
-                        "contact_person"
-                    ],
+                    "registration_number": data["registration_number"],
+                    "license_number": data["license_number"],
+                    "contact_person": data["contact_person"],
+                }
+            )
+
+            db.session.commit()
+
+            return user
+
+        except Exception:
+
+            db.session.rollback()
+
+            raise
+
+    @staticmethod
+    def register_officer(data):
+        """
+        Register a new officer.
+
+        Officer accounts require administrator approval.
+        """
+
+        if UserRepository.get_by_email(data["email"]):
+            raise ValueError("Email already registered.")
+
+        department = DepartmentRepository.get_by_name(data["department"])
+
+        if not department:
+            raise ValueError("Selected department does not exist.")
+
+        try:
+
+            user = UserRepository.create(
+                User(
+                    name=data["name"],
+                    email=data["email"],
+                    password_hash=hash_password(data["password"]),
+                    phone=data["phone"],
+                    role=UserRole.OFFICER,
+                    status=UserStatus.PENDING_APPROVAL
+                )
+            )
+
+            OfficerRepository.create(
+                {
+                    "user_id": user.id,
+                    "department_id": department.id,
+                    "availability_status": AvailabilityStatus.AVAILABLE,
+                
                 }
             )
 
@@ -159,7 +196,7 @@ class AuthService:
         Raises:
             ValueError: if the email doesn't exist, the password is
                 wrong, or the account isn't ACTIVE (e.g. still
-                PENDING_APPROVAL or SUSPENDED). The message is
+                PENDING_APPROVAL or BLOCKED or REJECTED). The message is
                 intentionally generic for bad credentials to avoid
                 leaking which part was wrong.
         """
@@ -180,18 +217,14 @@ class AuthService:
 
         if user.status == UserStatus.PENDING_APPROVAL:
             raise PermissionError(
-                "Your agency registration is awaiting admin approval."
+                "Your registration is awaiting admin approval."
             )
 
         if user.status == UserStatus.REJECTED:
-            raise PermissionError(
-                "Your agency registration has been rejected."
-            )
+            raise PermissionError("Your registration has been rejected.")
 
         if user.status == UserStatus.BLOCKED:
-            raise PermissionError(
-                "Your account has been blocked."
-            )
+            raise PermissionError("Your account has been blocked.")
 
         return AuthService._login_user(user)
 
@@ -199,33 +232,33 @@ class AuthService:
     def google_login(user_info):
         """
         Log in (or implicitly register) a user via Google OAuth.
- 
+
         Looks up the local user by the email Google returned. If no
         user exists yet, a new CITIZEN account is created automatically
         with AuthProvider.GOOGLE and ACTIVE status — no separate
         registration step needed, since Google has already verified
         the email address.
- 
+
         Args:
             user_info: dict from Google's userinfo/ID token, expected
                 to contain "email", "name", and "sub" (Google's
                 stable unique user ID, stored as provider_id).
- 
+
         Raises:
             ValueError: if an account with this email already exists
                 under a different provider (LOCAL) — prevents
                 silently taking over a password-based account just
                 because someone controls the matching Gmail address.
         """
- 
+
         user = UserRepository.get_by_email(user_info["email"])
- 
+
         if user and user.provider != AuthProvider.GOOGLE:
             raise ValueError(
                 "An account with this email already exists. "
                 "Please log in using your original sign-in method."
             )
- 
+
         if not user:
             user = User(
                 name=user_info["name"],
@@ -235,7 +268,7 @@ class AuthService:
                 role=UserRole.CITIZEN,
                 status=UserStatus.ACTIVE,
             )
- 
+
             user = UserRepository.create(user)
- 
+
         return AuthService._login_user(user)
