@@ -9,6 +9,7 @@ from marshmallow import ValidationError
 from app.schemas import (
     RegisterCitizenSchema,
     RegisterAgencySchema,
+    RegisterOfficerSchema,
     LoginSchema,
 )
 
@@ -192,6 +193,100 @@ def register_agency():
             500,
         )
 
+@auth_bp.post("/register/officer")
+def register_officer():
+
+    try:
+
+        data = RegisterOfficerSchema().load(
+            request.get_json()
+        )
+
+        user = AuthService.register_officer(data)
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": (
+                        "Officer registered successfully. "
+                        "Awaiting administrator approval."
+                    ),
+                    "data": {
+                        "id": str(user.id),
+                        "name": user.name,
+                        "email": user.email,
+                        "role": user.role.value,
+                        "status": user.status.value,
+                    },
+                }
+            ),
+            201,
+        )
+
+    except ValidationError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Validation failed.",
+                    "errors": err.messages,
+                }
+            ),
+            422,
+        )
+
+    except ValueError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            409,
+        )
+    
+    except PermissionError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            403,
+        )
+    
+    except PermissionError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            403,
+        )
+
+    except Exception as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error":str(err)
+                }
+            ),
+            500,
+        )
+    
+
 @auth_bp.post("/login")
 def login():
     """
@@ -248,14 +343,27 @@ def login():
             ),
             401,
         )
+    
+    except PermissionError as err:
 
-    except Exception:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            403,
+        )
+
+    except Exception as err:
 
         return (
             jsonify(
                 {
                     "success": False,
                     "message": "Internal server error.",
+                    "error":str(err)
                 }
             ),
             500,
