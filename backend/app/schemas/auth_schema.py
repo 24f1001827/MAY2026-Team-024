@@ -195,6 +195,81 @@ class RegisterAgencySchema(Schema):
             )
 
 
+class RegisterOfficerSchema(Schema):
+    """
+    Schema for officer registration.
+    """
+
+    name = fields.String(required=True)
+    email = fields.Email(required=True)
+    password = fields.String(required=True, load_only=True)
+    phone = fields.String(required=True)
+
+    department = fields.String(required=True)
+
+    @validates("password")
+    def validate_password(self, value, **kwargs):
+        """
+        Validate password strength.
+        """
+
+        if len(value) < 8:
+            raise ValidationError(
+                "Password must be at least 8 characters long."
+            )
+
+        if not re.search(r"[A-Z]", value):
+            raise ValidationError(
+                "Password must contain at least one uppercase letter."
+            )
+
+        if not re.search(r"[a-z]", value):
+            raise ValidationError(
+                "Password must contain at least one lowercase letter."
+            )
+
+        if not re.search(r"\d", value):
+            raise ValidationError(
+                "Password must contain at least one digit."
+            )
+
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", value):
+            raise ValidationError(
+                "Password must contain at least one special character."
+            )
+
+    @validates("phone")
+    def validate_phone(self, value, **kwargs):
+        """
+        Validate Indian mobile number.
+        """
+
+        if not re.fullmatch(r"^[6-9]\d{9}$", value):
+            raise ValidationError(
+                "Invalid phone number."
+            )
+
+    @validates("department")
+    def validate_department(self, value, **kwargs):
+        """
+        Validate department name.
+        """
+
+        if len(value.strip()) == 0:
+            raise ValidationError(
+                "Department is required."
+            )
+
+        if len(value.strip()) < 2:
+            raise ValidationError(
+                "Department name is too short."
+            )
+
+        if len(value) > 100:
+            raise ValidationError(
+                "Department name cannot exceed 100 characters."
+            )
+
 class LoginSchema(Schema):
     """
     Validates the payload for POST /login.
