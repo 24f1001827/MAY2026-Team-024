@@ -75,12 +75,11 @@ const STATUS_META: Record<UserStatus, { label: string; badge: string }> = {
   },
 }
 
-const STATUS_ORDER: UserStatus[] = [
-  "Active",
-  "PendingApproval",
-  "Rejected",
-  "Blocked",
-]
+// Derived from STATUS_META (which is exhaustive over UserStatus via its
+// Record<UserStatus, …> type). A new status must be added to STATUS_META or it
+// won't compile, and this filter order picks it up automatically — one source
+// of truth, no drift. Object key order follows STATUS_META's declaration order.
+const STATUS_ORDER = Object.keys(STATUS_META) as UserStatus[]
 
 interface AgencyFilters {
   search: string
