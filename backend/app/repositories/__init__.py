@@ -1,2 +1,4 @@
 from .user_repository import UserRepository
 from .agency_repository import AgencyRepository
+from .officer_repository import OfficerRepository
+from .department_repository import DepartmentRepository
