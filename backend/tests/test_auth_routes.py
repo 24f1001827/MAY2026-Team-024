@@ -99,7 +99,7 @@ def test_standard_register_success(mock_register, client):
             "email": "newuser@example.com", 
             "password": "SecurePassword123!",
             "name": "New Citizen",
-            "phone": "5876543210"
+            "phone": "9876543210"
         }
     )
     
@@ -141,3 +141,79 @@ def test_standard_login_invalid_credentials(mock_login, client):
     data = response.get_json()
     assert data["success"] is False
     assert "Invalid email or password." in data["message"]
+
+@patch("app.routes.auth.AuthService.register_agency")
+def test_agency_register_success(mock_register, client):
+    """Test successful agency registration returning a pending approval message."""
+    from unittest.mock import MagicMock
+    mock_agency = MagicMock()
+    mock_agency.id = 2
+    mock_agency.name = "City Works Dept"
+    mock_agency.email = "agency@example.com"
+    mock_agency.role.value = "agency"
+    mock_agency.status.value = "pending"
+    
+    mock_register.return_value = mock_agency
+    
+    response = client.post(
+        "/api/v1/auth/register/agency",
+        json={
+            "email": "agency@example.com", 
+            "password": "SecurePassword123!",
+            "name": "City Works Dept",
+            "phone": "9876543211",
+            "registration_number": "REG-12345",
+            "contact_person": "Jane Doe",
+            "license_number": "LIC-999" 
+        }
+    )
+    
+    assert response.status_code == 201, f"Failed: {response.get_json()}"
+    data = response.get_json()
+    assert data["success"] is True
+    assert "Awaiting admin approval" in data["message"]
+
+
+@patch("app.routes.auth.AuthService.register_agency")
+def test_agency_register_conflict(mock_register, client):
+    """Test agency registration rejection when email/license already exists."""
+    mock_register.side_effect = ValueError("Agency with this email already exists.")
+    
+    response = client.post(
+        "/api/v1/auth/register/agency",
+        json={
+            "email": "existing_agency@example.com", 
+            "password": "SecurePassword123!",
+            "name": "Existing Agency",
+            "phone": "9876543212",
+            "registration_number": "REG-12345",
+            "contact_person": "John Doe",
+            "license_number": "LIC-888"
+        }
+    )
+    
+    assert response.status_code == 409
+    data = response.get_json()
+    assert data["success"] is False
+    assert "already exists" in data["message"]
+
+@patch("app.routes.auth.AuthService.register_agency")
+def test_agency_register_forbidden(mock_register, client):
+    """Test agency registration rejection due to permissions."""
+    mock_register.side_effect = PermissionError("Not authorized to register agencies.")
+    
+    response = client.post(
+        "/api/v1/auth/register/agency",
+        json={
+            "email": "hacker@example.com", 
+            "password": "SecurePassword123!",
+            "name": "Fake Agency",
+            "phone": "9876543213",
+            "registration_number": "REG-12345",
+            "contact_person": "Hacker Man",
+            "license_number": "LIC-000"         
+        }
+    )
+    
+    assert response.status_code == 403
+    assert response.get_json()["success"] is False
