@@ -5,7 +5,8 @@ from app.models import (
     AuthProvider,
 )
 
-from app.repositories import UserRepository
+from app.repositories import UserRepository, AgencyRepository
+from app.extensions import db
 
 from app.utils import (
     hash_password,
@@ -51,7 +52,79 @@ class AuthService:
 
         return UserRepository.create(user)
 
-    
+
+    @staticmethod
+    def register_agency(data):
+        """
+        Register a new agency.
+
+        Creates both a User and an Agency record.
+        The agency account remains in PendingApproval
+        until approved by an administrator.
+
+        Args:
+            data: Validated request data.
+
+        Returns:
+            User: Newly created user.
+        """
+
+        if UserRepository.get_by_email(data["email"]):
+            raise ValueError("Email already registered.")
+
+        if AgencyRepository.get_by_registration_number(
+            data["registration_number"]
+        ):
+            raise ValueError(
+                "Registration number already exists."
+            )
+
+        if AgencyRepository.get_by_license_number(
+            data["license_number"]
+        ):
+            raise ValueError(
+                "License number already exists."
+            )
+
+        try:
+
+            user = UserRepository.create(
+                User(
+                    name=data["name"],
+                    email=data["email"],
+                    password=hash_password(
+                        data["password"]
+                    ),
+                    phone=data["phone"],
+                    role=UserRole.AGENCY,
+                    status=UserStatus.PENDING_APPROVAL,
+                )
+            )
+
+            AgencyRepository.create(
+                {
+                    "user_id": user.id,
+                    "registration_number": data[
+                        "registration_number"
+                    ],
+                    "license_number": data[
+                        "license_number"
+                    ],
+                    "contact_person": data[
+                        "contact_person"
+                    ],
+                }
+            )
+
+            db.session.commit()
+
+            return user
+
+        except Exception:
+
+            db.session.rollback()
+
+            raise
 
     @staticmethod
     def _login_user(user):
@@ -105,8 +178,20 @@ class AuthService:
         ):
             raise ValueError("Invalid email or password.")
 
-        if user.status != UserStatus.ACTIVE:
-            raise ValueError(f"Account is {user.status.value.lower()}.")
+        if user.status == UserStatus.PENDING_APPROVAL:
+            raise PermissionError(
+                "Your agency registration is awaiting admin approval."
+            )
+
+        if user.status == UserStatus.REJECTED:
+            raise PermissionError(
+                "Your agency registration has been rejected."
+            )
+
+        if user.status == UserStatus.BLOCKED:
+            raise PermissionError(
+                "Your account has been blocked."
+            )
 
         return AuthService._login_user(user)
 
