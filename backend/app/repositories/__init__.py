@@ -2,3 +2,5 @@ from .user_repository import UserRepository
 from .agency_repository import AgencyRepository
 from .officer_repository import OfficerRepository
 from .department_repository import DepartmentRepository
+from .complaint_image_repository import ComplaintImageRepository
+from .complaint_repository import ComplaintRepository
