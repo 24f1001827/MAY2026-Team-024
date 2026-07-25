@@ -4,3 +4,5 @@ from .auth_schema import (
     RegisterOfficerSchema,
     LoginSchema,
 )
+
+from .complaint_schema import ComplaintSchema,ComplaintResponseSchema
