@@ -1,0 +1,64 @@
+from app.extensions import db
+from app.models.complaint import Complaint
+from datetime import datetime, timedelta
+from app.models import IST
+from sqlalchemy import and_
+
+class ComplaintRepository:
+    """
+    Repository for complaint database operations.
+    """
+
+    @staticmethod
+    def create(data):
+        """
+        Create a new complaint.
+        """
+
+        complaint = Complaint(**data)
+
+        db.session.add(complaint)
+
+        return complaint
+
+    @staticmethod
+    def get_by_id(complaint_id):
+        """
+        Retrieve a complaint by its ID.
+        """
+
+        return Complaint.query.filter_by(
+            id=complaint_id,
+            deleted_at=None,
+        ).first()
+
+    @staticmethod
+    def get_by_citizen_id(citizen_id):
+        """
+        Retrieve all complaints created by a citizen.
+        """
+
+        return (
+            Complaint.query.filter_by(
+                citizen_id=citizen_id,
+                deleted_at=None,
+            )
+            .order_by(Complaint.created_at.desc())
+            .all()
+        )
+
+    @staticmethod
+    def update():
+        """
+        Commit pending complaint updates.
+        """
+
+        db.session.commit()
+
+    @staticmethod
+    def delete(complaint):
+        """
+        Soft delete a complaint.
+        """
+        complaint.deleted_at = datetime.now(IST)
+        db.session.commit()
