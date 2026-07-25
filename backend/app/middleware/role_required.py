@@ -1,0 +1,43 @@
+from functools import wraps
+
+from flask import jsonify
+from flask_jwt_extended import (
+    get_jwt,
+    verify_jwt_in_request,
+)
+
+
+def role_required(*allowed_roles):
+    """
+    Restrict access to users with the specified roles.
+    """
+
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            verify_jwt_in_request()
+
+            claims = get_jwt()
+
+            user_role = claims.get("role")
+
+            allowed = {
+                role.value if hasattr(role, "value") else role
+                for role in allowed_roles
+            }
+
+            if user_role not in allowed:
+                return (
+                    jsonify(
+                        {
+                            "message": "You are not authorized to access this resource."
+                        }
+                    ),
+                    403,
+                )
+
+            return fn(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
