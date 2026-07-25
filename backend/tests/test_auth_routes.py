@@ -1,16 +1,28 @@
 import pytest
 from unittest.mock import patch, MagicMock
+from flask import redirect
 
-def test_google_login_redirect(client):
+
+@patch("app.routes.auth.oauth.google.authorize_redirect")
+def test_google_login_redirect(mock_authorize_redirect, client):
     """
-    Test that hitting /google/login returns a 302 redirect 
-    to the Google consent screen.
+    Test that hitting /google/login returns a 302 redirect.
+
+    This is mocked to avoid Authlib performing network calls during tests.
     """
+    mock_authorize_redirect.return_value = redirect(
+        "https://accounts.google.com/o/oauth2/v2/auth",
+        code=302,
+    )
+
     response = client.get("/api/v1/auth/google/login")
-    
+
     assert response.status_code == 302
     assert "accounts.google.com" in response.headers["Location"]
 
+    args, kwargs = mock_authorize_redirect.call_args
+    assert args[0].endswith("/api/v1/auth/google/callback")
+    assert kwargs.get("prompt") == "consent"
 
 @patch("app.routes.auth.AuthService.google_login")
 @patch("app.routes.auth.oauth.google.authorize_access_token")
