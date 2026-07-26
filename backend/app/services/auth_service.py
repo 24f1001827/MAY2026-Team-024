@@ -89,7 +89,7 @@ class AuthService:
                 User(
                     name=data["name"],
                     email=data["email"],
-                    password=hash_password(data["password"]),
+                    password_hash=hash_password(data["password"]),
                     phone=data["phone"],
                     role=UserRole.AGENCY,
                     status=UserStatus.PENDING_APPROVAL,
