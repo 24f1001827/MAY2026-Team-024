@@ -261,17 +261,6 @@ def register_officer():
             403,
         )
     
-    except PermissionError as err:
-
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": str(err),
-                }
-            ),
-            403,
-        )
 
     except Exception as err:
 
