@@ -198,3 +198,27 @@ class ComplaintResponseSchema(Schema):
 
     def get_priority(self, obj):
         return obj.priority.value
+
+
+class AssignComplaintSchema(Schema):
+    """
+    Schema for assigning a complaint to an officer.
+    """
+
+    officer_id = fields.UUID(required=True)
+
+    assignment_note = fields.String(
+        required=False,
+        allow_none=True,
+    )
+
+    @validates("assignment_note")
+    def validate_assignment_note(self, value, **kwargs):
+        """
+        Validate assignment note.
+        """
+
+        if value and len(value.strip()) > 500:
+            raise ValidationError(
+                "Assignment note cannot exceed 500 characters."
+            )

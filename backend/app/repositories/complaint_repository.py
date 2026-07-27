@@ -48,6 +48,40 @@ class ComplaintRepository:
         )
 
     @staticmethod
+    def get_all(status=None, department_id=None):
+        """
+        Retrieve all complaints.
+        """
+
+        query = Complaint.query.filter_by(deleted_at=None)
+
+        if status:
+            query = query.filter_by(status=status)
+
+        if department_id:
+            query = query.filter_by(department_id=department_id)
+
+        return query.order_by(
+            Complaint.created_at.desc()
+        ).all()
+
+
+    @staticmethod
+    def get_by_department(department_id):
+        """
+        Retrieve complaints belonging to a department.
+        """
+
+        return (
+            Complaint.query.filter_by(
+                department_id=department_id,
+                deleted_at=None,
+            )
+            .order_by(Complaint.created_at.desc())
+            .all()
+        )
+
+    @staticmethod
     def update():
         """
         Commit pending complaint updates.
