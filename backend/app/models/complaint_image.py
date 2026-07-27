@@ -28,6 +28,8 @@ class ComplaintImage(BaseModel):
         nullable=False,
     )
 
+    public_id = db.Column(db.String(255), nullable=True)
+
     # -------------------------
     # Relationships
     # -------------------------

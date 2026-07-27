@@ -11,8 +11,10 @@ def upload_image(image):
         folder="complaints",
     )
 
-    return response["secure_url"]
-
+    return {
+        "image_url": response["secure_url"],
+        "public_id": response["public_id"],
+    }
 
 def delete_image(public_id):
     """
