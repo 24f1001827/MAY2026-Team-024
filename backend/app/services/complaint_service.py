@@ -137,82 +137,88 @@ class ComplaintService:
         """
         Update an existing complaint.
         """
+        try:
+            user_id = get_jwt_identity()
 
-        user_id = get_jwt_identity()
+            user = UserRepository.get_by_id(user_id)
 
-        user = UserRepository.get_by_id(user_id)
+            if not user:
+                raise ValueError("User not found.")
 
-        if not user:
-            raise ValueError("User not found.")
-
-        complaint = ComplaintRepository.get_by_id(
-            complaint_id
-        )
-
-        if not complaint:
-            raise ValueError("Complaint not found.")
-
-        if complaint.citizen_id != user.id:
-            raise PermissionError(
-                "You are not authorized to update this complaint."
+            complaint = ComplaintRepository.get_by_id(
+                complaint_id
             )
 
-        if complaint.status != ComplaintStatus.SUBMITTED:
-            raise ValueError(
-                "Only submitted complaints can be updated."
-            )
+            if not complaint:
+                raise ValueError("Complaint not found.")
 
-        department = DepartmentRepository.get_by_name(
-            data["department"]
-        )
-
-        if not department:
-            raise ValueError(
-                "Department not found."
-            )
-
-        complaint.title = data["title"]
-        complaint.description = data["description"]
-
-        complaint.department_id = department.id
-
-        complaint.latitude = data["latitude"]
-        complaint.longitude = data["longitude"]
-
-        complaint.address = data["address"]
-        complaint.locality = data["locality"]
-        complaint.city = data["city"]
-        complaint.state = data["state"]
-        complaint.pincode = data["pincode"]
-
-        if images:
-
-            for image in complaint.images:
-
-                db.session.delete(image)
-
-            db.session.flush()
-
-            for image in images:
-
-                image_url = upload_image(image)
-
-                complaint_image = ComplaintImageRepository.create(
-                    {
-                        "complaint_id":complaint.id,
-                        "uploaded_by":user.id,
-                        "image_url":image_url
-                    }
-                    
+            if complaint.citizen_id != user.id:
+                raise PermissionError(
+                    "You are not authorized to update this complaint."
                 )
 
-                db.session.add(
-                    complaint_image
+            if complaint.status != ComplaintStatus.SUBMITTED:
+                raise ValueError(
+                    "Only submitted complaints can be updated."
                 )
 
-        ComplaintRepository.update()
+            department = DepartmentRepository.get_by_name(
+                data["department"]
+            )
 
-        return complaint
+            if not department:
+                raise ValueError(
+                    "Department not found."
+                )
+
+            complaint.title = data["title"]
+            complaint.description = data["description"]
+
+            complaint.department_id = department.id
+
+            complaint.latitude = data["latitude"]
+            complaint.longitude = data["longitude"]
+
+            complaint.address = data["address"]
+            complaint.locality = data["locality"]
+            complaint.city = data["city"]
+            complaint.state = data["state"]
+            complaint.pincode = data["pincode"]
+
+            if images:
+
+                for old_image in complaint.images:
+                    delete_image(old_image.public_id)
+                    db.session.delete(old_image)
+
+                db.session.flush()
+
+                for image in images:
+
+                    uploaded = upload_image(image)
+
+                    complaint_image = ComplaintImageRepository.create(
+                        {
+                            "complaint_id":complaint.id,
+                            "uploaded_by":user.id,
+                            "image_url":uploaded['image_url'],
+                            "public_id": uploaded["public_id"],
+                        }
+                        
+                    )
+
+                    db.session.add(
+                        complaint_image
+                    )
+
+            ComplaintRepository.update()
+
+            return complaint
+
+        except Exception:
+            db.session.rollback()
+            raise
+    
     
     @staticmethod
     def delete_complaint(complaint_id):
