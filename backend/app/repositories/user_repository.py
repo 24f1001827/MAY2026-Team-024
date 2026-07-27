@@ -1,8 +1,9 @@
 from app.extensions import db
-from app.models import User
+from app.models import User, UserRole
 
 from datetime import datetime
 from app.models.base_model import IST
+
 
 class UserRepository:
     """
@@ -25,6 +26,24 @@ class UserRepository:
         db.session.commit()
 
         return user
+
+    @staticmethod
+    def get_all(role=None, status=None):
+        """
+        Retrieve users with optional role and status filters excluding ADMIN.
+        """
+
+        query = User.query.filter(
+            User.deleted_at.is_(None), User.role != UserRole.ADMIN
+        )
+
+        if role:
+            query = query.filter(User.role == role)
+
+        if status:
+            query = query.filter(User.status == status)
+
+        return query.order_by(User.created_at.desc()).all()
 
     @staticmethod
     def get_by_email(email: str) -> User | None:
