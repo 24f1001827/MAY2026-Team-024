@@ -4,8 +4,10 @@ from flask_jwt_extended import jwt_required
 from app.middleware import role_required
 from app.models import UserRole
 from app.schemas import ComplaintResponseSchema,AssignComplaintSchema
-from app.services import AdminComplaintService
+from app.services import AdminComplaintService,AdminBudgetService
 from marshmallow import ValidationError
+
+from app.schemas import AllocateBudgetSchema
 
 
 admin_complaint_bp = Blueprint(
@@ -14,6 +16,7 @@ admin_complaint_bp = Blueprint(
     url_prefix="/api/v1/admin/complaints",
 )
 
+allocate_budget_schema = AllocateBudgetSchema()
 
 @admin_complaint_bp.get("")
 @jwt_required()
@@ -296,6 +299,77 @@ def assign_complaint(complaint_id):
         )
 
     except Exception as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
+@admin_complaint_bp.patch("/<uuid:complaint_id>/allocate-budget")
+@jwt_required()
+@role_required(UserRole.ADMIN)
+def allocate_budget(complaint_id):
+
+    try:
+
+        data = allocate_budget_schema.load(
+            request.get_json()
+        )
+
+        complaint = AdminBudgetService.allocate_budget(
+            complaint_id,
+            data,
+        )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Budget allocated successfully.",
+                    "data": {
+                        "complaint_id": complaint.id,
+                        "department_budget": str(
+                            complaint.department.budget
+                        ),
+                        "status": complaint.status.value,
+                    },
+                }
+            ),
+            200,
+        )
+
+    except ValidationError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Validation failed.",
+                    "errors": err.messages,
+                }
+            ),
+            422,
+        )
+
+    except ValueError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            400,
+        )
+
+    except Exception as err:
+
         return (
             jsonify(
                 {
