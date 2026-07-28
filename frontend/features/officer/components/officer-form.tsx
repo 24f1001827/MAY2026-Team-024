@@ -10,6 +10,7 @@ import { toast } from "@/lib/styles/toast-styles"
 import { routes } from "@/nav"
 import { mockDepartments } from "@/components/shared/mock-data"
 import { AVAILABILITY_STATUSES } from "@/types/officer"
+import type { AvailabilityStatus, CreateOfficerRequest } from "@/types/officer"
 import type { OfficerView } from "./officer-list"
 
 /** Shared `id` linking the header's submit button to this form. */
@@ -44,14 +45,31 @@ export function OfficerForm({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    // Collect the form into a typed payload, ready to POST/PATCH once the
+    // backend lands. Native `required` + input types handle basic validation.
+    const data = new FormData(event.currentTarget)
+    const input: CreateOfficerRequest = {
+      name: String(data.get("name") ?? "").trim(),
+      email: String(data.get("email") ?? "").trim(),
+      phone: String(data.get("phone") ?? "").trim(),
+      departmentId: Number(data.get("departmentId") ?? 0),
+      availabilityStatus: String(
+        data.get("availabilityStatus") ?? "Available"
+      ) as AvailabilityStatus,
+      maxWorkload: Number(data.get("maxWorkload") ?? 0),
+    }
+
     if (isEdit && officer) {
+      // TODO(backend): PATCH officers/:userId with { userId: officer.userId, ...input } (UpdateOfficerInput).
       toast.success("Officer updated", {
-        description: "Your changes have been saved.",
+        description: `Your changes to ${input.name} have been saved.`,
       })
       router.push(routes.officers.detail(officer.userId).href)
     } else {
+      // TODO(backend): POST officers with `input` (CreateOfficerInput).
       toast.success("Officer added", {
-        description: "The officer has been onboarded.",
+        description: `${input.name} has been onboarded.`,
       })
       router.push(routes.officers.href)
     }
