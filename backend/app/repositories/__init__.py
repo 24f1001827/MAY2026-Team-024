@@ -5,3 +5,5 @@ from .department_repository import DepartmentRepository
 from .complaint_image_repository import ComplaintImageRepository
 from .complaint_repository import ComplaintRepository
 from.complaint_assignment_repository import ComplaintAssignmentRepository
+from .review_report_repository import ReviewReportRepository
+from .tender_repository import TenderRepository
