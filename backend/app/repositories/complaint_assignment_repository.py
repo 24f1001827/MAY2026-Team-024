@@ -53,6 +53,17 @@ class ComplaintAssignmentRepository:
         )
 
     @staticmethod
+    def get_by_officer_and_complaint(officer_id, complaint_id):
+        """
+        Retrieve an assignment for a specific officer and complaint.
+        """
+        return ComplaintAssignment.query.filter_by(
+            officer_id=officer_id,
+            complaint_id=complaint_id,
+            deleted_at=None,
+        ).first()
+
+    @staticmethod
     def update():
         """
         Commit any updates made to an assignment.
