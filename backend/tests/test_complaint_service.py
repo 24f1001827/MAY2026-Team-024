@@ -109,17 +109,21 @@ def test_create_complaint_with_image(
     mock_user_repo.get_by_id.return_value = user
     mock_department_repo.get_by_name.return_value = department
     mock_complaint_repo.create.return_value = complaint
-    mock_upload_image.return_value = "https://cloudinary.example/pothole.jpg"
+    mock_upload_image.return_value = {
+    "image_url": "https://cloudinary.example/pothole.jpg",
+    "public_id": "pothole-cloudinary-id",
+    }
 
     ComplaintService.create_complaint(complaint_data(), [image])
 
     mock_upload_image.assert_called_once_with(image)
     mock_image_repo.create.assert_called_once_with(
-        {
-            "complaint_id": complaint.id,
-            "uploaded_by": user.id,
-            "image_url": "https://cloudinary.example/pothole.jpg",
-        }
+    {
+        "complaint_id": complaint.id,
+        "uploaded_by": user.id,
+        "image_url": "https://cloudinary.example/pothole.jpg",
+        "public_id": "pothole-cloudinary-id",
+      }
     )
     mock_db.commit.assert_called_once()
 
