@@ -8,3 +8,4 @@ from .complaint_assignment_repository import ComplaintAssignmentRepository
 from .review_report_repository import ReviewReportRepository
 from .tender_repository import TenderRepository
 from .agency_proposal_repository import AgencyProposalRepository
+from .work_order_repository import WorkOrderRepository
