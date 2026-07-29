@@ -50,6 +50,7 @@ class AgencyProposalRepository:
         return (
             AgencyProposal.query.filter_by(
                 tender_id=tender_id,
+                deleted_at=None
             )
             .order_by(
                 AgencyProposal.created_at.asc(),
@@ -63,7 +64,7 @@ class AgencyProposalRepository:
         Retrieve proposal by ID.
         """
 
-        return AgencyProposal.query.get(proposal_id)
+        return AgencyProposal.query.get(proposal_id,deleted_at=None)
 
     @staticmethod
     def reject_other_proposals(
@@ -78,6 +79,7 @@ class AgencyProposalRepository:
             AgencyProposal.tender_id == tender_id,
             AgencyProposal.id != accepted_proposal_id,
             AgencyProposal.status != ProposalStatus.REJECTED,
+            AgencyProposal.deleted_at == None
         ).update(
             {
                 "status": ProposalStatus.REJECTED,
