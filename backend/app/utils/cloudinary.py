@@ -22,7 +22,8 @@ def upload_document(document,folder):
     """
     response = cloudinary.uploader.upload(
         document,
-        folder=folder
+        folder=folder,
+        resource_type="auto"
     )
 
     return {
