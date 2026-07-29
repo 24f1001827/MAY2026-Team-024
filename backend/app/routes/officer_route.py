@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify,request
+from flask import Blueprint, jsonify, request
 from marshmallow import ValidationError
 from flask_jwt_extended import (
     get_jwt_identity,
@@ -15,6 +15,9 @@ from app.schemas import (
     OfficerComplaintDetailSchema,
     CreateTenderSchema,
     TenderResponseSchema,
+    OfficerProposalListSchema,
+    OfficerProposalDetailSchema,
+    UpdateProposalStatusSchema,
 )
 from app.services import OfficerService
 
@@ -31,6 +34,11 @@ review_report_response_schema = ReviewReportResponseSchema()
 officer_complaint_detail_schema = OfficerComplaintDetailSchema()
 create_tender_schema = CreateTenderSchema()
 tender_response_schema = TenderResponseSchema()
+officer_proposal_list_schema = OfficerProposalListSchema(
+    many=True,
+)
+officer_proposal_detail_schema = OfficerProposalDetailSchema()
+update_proposal_status_schema = UpdateProposalStatusSchema()
 
 
 @officer_bp.get("/complaints")
@@ -179,6 +187,7 @@ def reject_assignment(complaint_id):
             500,
         )
 
+
 @officer_bp.post("/complaints/<uuid:complaint_id>/review-report")
 @jwt_required()
 @role_required(UserRole.OFFICER)
@@ -189,9 +198,7 @@ def submit_review_report(complaint_id):
 
     try:
 
-        data = create_review_report_schema.load(
-            request.get_json()
-        )
+        data = create_review_report_schema.load(request.get_json())
 
         report = OfficerService.submit_review_report(
             get_jwt_identity(),
@@ -204,9 +211,7 @@ def submit_review_report(complaint_id):
                 {
                     "success": True,
                     "message": "Review report submitted successfully.",
-                    "data": review_report_response_schema.dump(
-                        report
-                    ),
+                    "data": review_report_response_schema.dump(report),
                 }
             ),
             201,
@@ -250,6 +255,7 @@ def submit_review_report(complaint_id):
             500,
         )
 
+
 @officer_bp.get("/complaints/<uuid:complaint_id>")
 @jwt_required()
 @role_required(UserRole.OFFICER)
@@ -270,9 +276,7 @@ def get_complaint_details(complaint_id):
                 {
                     "success": True,
                     "message": "Complaint details retrieved successfully.",
-                    "data": officer_complaint_detail_schema.dump(
-                        assignment
-                    ),
+                    "data": officer_complaint_detail_schema.dump(assignment),
                 }
             ),
             200,
@@ -302,6 +306,7 @@ def get_complaint_details(complaint_id):
             ),
             500,
         )
+
 
 @officer_bp.post("/complaints/<uuid:complaint_id>/budget-request")
 @jwt_required()
@@ -357,6 +362,7 @@ def request_budget(complaint_id):
             500,
         )
 
+
 @officer_bp.post("/complaints/<uuid:complaint_id>/tender")
 @jwt_required()
 @role_required(UserRole.OFFICER)
@@ -367,9 +373,7 @@ def create_tender(complaint_id):
 
     try:
 
-        data = create_tender_schema.load(
-            request.get_json()
-        )
+        data = create_tender_schema.load(request.get_json())
 
         tender = OfficerService.create_tender(
             get_jwt_identity(),
@@ -382,9 +386,7 @@ def create_tender(complaint_id):
                 {
                     "success": True,
                     "message": "Tender created successfully.",
-                    "data": tender_response_schema.dump(
-                        tender
-                    ),
+                    "data": tender_response_schema.dump(tender),
                 }
             ),
             201,
@@ -401,6 +403,226 @@ def create_tender(complaint_id):
                 }
             ),
             422,
+        )
+
+    except ValueError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            400,
+        )
+
+    except Exception as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
+
+@officer_bp.get("/tenders/<int:tender_id>/proposals")
+@jwt_required()
+@role_required(UserRole.OFFICER)
+def get_tender_proposals(
+    tender_id,
+):
+    """
+    Retrieve proposals submitted for a tender.
+    """
+
+    try:
+
+        proposals = OfficerService.get_tender_proposals(
+            get_jwt_identity(),
+            tender_id,
+        )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Tender proposals retrieved successfully.",
+                    "data": officer_proposal_list_schema.dump(
+                        proposals,
+                    ),
+                }
+            ),
+            200,
+        )
+
+    except PermissionError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            403,
+        )
+
+    except ValueError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            404,
+        )
+
+    except Exception as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
+
+@officer_bp.get("/proposals/<int:proposal_id>")
+@jwt_required()
+@role_required(UserRole.OFFICER)
+def get_proposal(
+    proposal_id,
+):
+    """
+    Retrieve proposal details.
+    """
+
+    try:
+
+        proposal = OfficerService.get_proposal(
+            get_jwt_identity(),
+            proposal_id,
+        )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Proposal retrieved successfully.",
+                    "data": officer_proposal_detail_schema.dump(
+                        proposal,
+                    ),
+                }
+            ),
+            200,
+        )
+
+    except PermissionError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            403,
+        )
+
+    except ValueError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            404,
+        )
+
+    except Exception as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
+
+@officer_bp.patch("/proposals/<int:proposal_id>/status")
+@jwt_required()
+@role_required(UserRole.OFFICER)
+def update_proposal_status(
+    proposal_id,
+):
+    """
+    Update proposal status.
+    """
+
+    try:
+
+        data = update_proposal_status_schema.load(request.get_json())
+
+        proposal = OfficerService.update_proposal_status(
+            get_jwt_identity(),
+            proposal_id,
+            data,
+        )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Proposal status updated successfully.",
+                    "data": officer_proposal_detail_schema.dump(
+                        proposal,
+                    ),
+                }
+            ),
+            200,
+        )
+
+    except ValidationError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Validation failed.",
+                    "errors": err.messages,
+                }
+            ),
+            422,
+        )
+
+    except PermissionError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            403,
         )
 
     except ValueError as err:
