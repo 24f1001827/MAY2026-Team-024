@@ -6,6 +6,7 @@ from app.models import (
     ReviewDecision,
     TenderStatus,
     ProposalStatus,
+    WorkOrderStatus,
 )
 
 from app.repositories import (
@@ -15,6 +16,7 @@ from app.repositories import (
     ComplaintRepository,
     TenderRepository,
     AgencyProposalRepository,
+    WorkOrderRepository,
 )
 
 from app.extensions import db
@@ -345,7 +347,6 @@ class OfficerService:
 
         return proposal
 
-
     @staticmethod
     def update_proposal_status(
         user_id,
@@ -405,9 +406,139 @@ class OfficerService:
             )
             proposal.agency.current_projects += 1
             proposal.tender.complaint.status = ComplaintStatus.TENDER_ALLOTED
+            tender = proposal.tender
+            tender.status = TenderStatus.AWARDED
 
         proposal.status = new_status
 
         AgencyProposalRepository.update()
 
         return proposal
+
+    @staticmethod
+    def create_work_order(
+        user_id,
+        proposal_id,
+        data,
+    ):
+        """
+        Create work order for an accepted proposal.
+        """
+
+        officer = OfficerRepository.get_by_user_id(
+            user_id,
+        )
+
+        if officer is None:
+            raise ValueError("Officer not found.")
+
+        proposal = AgencyProposalRepository.get_by_id(
+            proposal_id,
+        )
+
+        if proposal is None:
+            raise ValueError("Proposal not found.")
+
+        if proposal.status != ProposalStatus.ACCEPTED:
+            raise ValueError("Only accepted proposals can have work orders.")
+
+        tender = proposal.tender
+
+        if tender is None:
+            raise ValueError("Tender not found.")
+
+        existing = WorkOrderRepository.get_by_tender_id(
+            proposal.tender_id,
+        )
+
+        if existing:
+            raise ValueError("Work order already exists.")
+
+        assignment = ComplaintAssignmentRepository.get_by_officer_and_complaint(
+            officer.user_id,
+            proposal.tender.complaint_id,
+        )
+
+        if assignment is None or assignment.status != AssignmentStatus.ACCEPTED:
+            raise PermissionError("You are not assigned to this complaint.")
+
+        work_order = WorkOrderRepository.create(
+            {
+                "tender_id": proposal.tender_id,
+                "agency_id": proposal.agency_id,
+                "assigned_by": officer.user_id,
+                "scope_of_work": data["scope_of_work"],
+                "status": WorkOrderStatus.ASSIGNED,
+                "remarks": data.get("remarks"),
+            }
+        )
+        # tender.complaint.status=ComplaintStatus.WORK_IN_PROGRESS
+        # tender.status=TenderStatus.CLOSED
+        
+
+        db.session.commit()
+
+        return work_order
+
+    @staticmethod
+    def verify_work_order(
+        user_id,
+        work_order_id,
+    ):
+        """
+        Verify a completed work order.
+        """
+
+        officer = OfficerRepository.get_by_user_id(
+            user_id,
+        )
+
+        if officer is None:
+            raise ValueError(
+                "Officer not found."
+            )
+
+        work_order = WorkOrderRepository.get_by_id(
+            work_order_id,
+        )
+
+        if work_order is None:
+            raise ValueError(
+                "Work order not found."
+            )
+        print("Before assignment")
+        print(officer.user_id)
+        print(work_order.tender.complaint_id)
+        assignment = (
+            ComplaintAssignmentRepository
+            .get_by_officer_and_complaint(
+                officer.user_id,
+                work_order.tender.complaint_id
+            )
+        )
+        print(assignment.officer_id)
+
+        if assignment is None:
+            raise PermissionError(
+                "You are not authorized to verify this work order."
+            )
+
+        if work_order.status != WorkOrderStatus.COMPLETED:
+            raise ValueError(
+                "Only completed work orders can be verified."
+            )
+
+        if not work_order.completion_proof_url:
+            raise ValueError(
+                "Completion proof has not been uploaded."
+            )
+
+        work_order.status = WorkOrderStatus.VERIFIED
+        work_order.verified_by = officer.user_id
+        work_order.verified_at = datetime.now(IST)
+
+        work_order.tender.complaint.status = ComplaintStatus.RESOLVED
+
+        db.session.commit()
+
+        return work_order
