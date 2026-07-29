@@ -378,7 +378,7 @@ class OfficerService:
         if assignment is None:
             raise PermissionError("You are not authorized to update this proposal.")
 
-        new_status = ProposalStatus(data["status"])
+        new_status = data["status"]
 
         allowed_transitions = {
             ProposalStatus.SUBMITTED: [
