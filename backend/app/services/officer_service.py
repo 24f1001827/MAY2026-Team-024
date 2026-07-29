@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from app.models import (
     AssignmentStatus,
@@ -6,6 +5,7 @@ from app.models import (
     ComplaintStatus,
     ReviewDecision,
     TenderStatus,
+    ProposalStatus,
 )
 
 from app.repositories import (
@@ -14,6 +14,7 @@ from app.repositories import (
     ReviewReportRepository,
     ComplaintRepository,
     TenderRepository,
+    AgencyProposalRepository,
 )
 
 from app.extensions import db
@@ -273,3 +274,139 @@ class OfficerService:
         db.session.commit()
 
         return tender
+
+    @staticmethod
+    def get_tender_proposals(
+        user_id,
+        tender_id,
+    ):
+        """
+        Retrieve all proposals submitted for a tender.
+        """
+
+        officer = OfficerRepository.get_by_user_id(
+            user_id,
+        )
+
+        if officer is None:
+            raise ValueError("Officer not found.")
+
+        tender = TenderRepository.get_by_id(
+            tender_id,
+        )
+
+        if tender is None:
+            raise ValueError("Tender not found.")
+
+        assignment = ComplaintAssignmentRepository.get_by_officer_and_complaint(
+            officer.user_id,
+            tender.complaint_id,
+        )
+
+        if assignment is None:
+            raise PermissionError(
+                "You are not authorized to view proposals for this tender."
+            )
+
+        return AgencyProposalRepository.get_by_tender_id(
+            tender_id,
+        )
+
+    @staticmethod
+    def get_proposal(
+        user_id,
+        proposal_id,
+    ):
+        """
+        Retrieve proposal details.
+        """
+
+        officer = OfficerRepository.get_by_user_id(
+            user_id,
+        )
+
+        if officer is None:
+            raise ValueError("Officer not found.")
+
+        proposal = AgencyProposalRepository.get_by_id(
+            proposal_id,
+        )
+
+        if proposal is None:
+            raise ValueError("Proposal not found.")
+
+        assignment = ComplaintAssignmentRepository.get_by_officer_and_complaint(
+            officer.user_id,
+            proposal.tender.complaint_id,
+        )
+
+        if assignment is None:
+            raise PermissionError("You are not authorized to view this proposal.")
+
+        return proposal
+
+
+    @staticmethod
+    def update_proposal_status(
+        user_id,
+        proposal_id,
+        data,
+    ):
+        """
+        Update proposal status.
+        """
+
+        officer = OfficerRepository.get_by_user_id(
+            user_id,
+        )
+
+        if officer is None:
+            raise ValueError("Officer not found.")
+
+        proposal = AgencyProposalRepository.get_by_id(
+            proposal_id,
+        )
+
+        if proposal is None:
+            raise ValueError("Proposal not found.")
+
+        assignment = ComplaintAssignmentRepository.get_by_officer_and_complaint(
+            officer.user_id,
+            proposal.tender.complaint_id,
+        )
+
+        if assignment is None:
+            raise PermissionError("You are not authorized to update this proposal.")
+
+        new_status = ProposalStatus(data["status"])
+
+        allowed_transitions = {
+            ProposalStatus.SUBMITTED: [
+                ProposalStatus.SHORTLISTED,
+                ProposalStatus.REJECTED,
+            ],
+            ProposalStatus.SHORTLISTED: [
+                ProposalStatus.ACCEPTED,
+                ProposalStatus.REJECTED,
+            ],
+        }
+
+        if (
+            proposal.status not in allowed_transitions
+            or new_status not in allowed_transitions[proposal.status]
+        ):
+            raise ValueError("Invalid proposal status transition.")
+
+        if new_status == ProposalStatus.ACCEPTED:
+
+            AgencyProposalRepository.reject_other_proposals(
+                proposal.tender_id,
+                proposal.id,
+            )
+            proposal.agency.current_projects += 1
+
+        proposal.status = new_status
+
+        AgencyProposalRepository.update()
+
+        return proposal

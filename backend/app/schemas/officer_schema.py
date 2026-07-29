@@ -7,6 +7,7 @@ from app.models import (
     ComplaintStatus,
     ReviewDecision,
     TenderStatus,
+    ProposalStatus,
 )
 
 
@@ -192,10 +193,9 @@ class OfficerComplaintDetailSchema(Schema):
         attribute="complaint.ai_priority_score"
     )
 
-    images = fields.List(
-        fields.String(),
-        attribute="complaint.images",
-    )
+    images = fields.Method("get_images")
+    def get_images(self, obj):
+        return [img.image_url for img in obj.complaint.images]
 
     review_report = fields.Nested(
         ReviewReportDetailSchema,
@@ -232,4 +232,62 @@ class TenderResponseSchema(Schema):
     status = EnumField(
         TenderStatus,
         by_value=True,
+    )
+
+class OfficerProposalListSchema(Schema):
+
+    proposal_id = fields.Integer(
+        attribute="id",
+    )
+
+    agency_id = fields.UUID()
+
+    proposal_amount = fields.Decimal(
+        as_string=True,
+    )
+
+    proposal_document = fields.String()
+
+    remarks = fields.String()
+
+    status = EnumField(
+        ProposalStatus,
+        by_value=True,
+    )
+
+    created_at = fields.DateTime()
+
+class OfficerProposalDetailSchema(Schema):
+
+    proposal_id = fields.Integer(
+        attribute="id",
+    )
+
+    tender_id = fields.Integer()
+
+    agency_id = fields.UUID()
+
+    proposal_amount = fields.Decimal(
+        as_string=True,
+    )
+
+    proposal_document = fields.String()
+
+    remarks = fields.String()
+
+    status = EnumField(
+        ProposalStatus,
+        by_value=True,
+    )
+
+    created_at = fields.DateTime()
+
+    updated_at = fields.DateTime()
+
+class UpdateProposalStatusSchema(Schema):
+
+    status = EnumField(
+        ProposalStatus,
+        by_value=True,
+        required=True,
     )
