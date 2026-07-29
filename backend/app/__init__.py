@@ -6,7 +6,14 @@ from app.extensions import db, migrate, jwt, cors, oauth
 
 from app.models import *
 
-from app.routes import auth_bp, complaint_bp, admin_complaint_bp, admin_user_bp, officer_bp
+from app.routes import (
+    auth_bp,
+    complaint_bp,
+    admin_complaint_bp,
+    admin_user_bp,
+    officer_bp,
+    agency_bp
+)
 
 from app.extensions import init_google_oauth, configure_cloudinary
 
@@ -49,4 +56,5 @@ def create_app():
     app.register_blueprint(admin_complaint_bp)
     app.register_blueprint(admin_user_bp)
     app.register_blueprint(officer_bp)
+    app.register_blueprint(agency_bp)
     return app
