@@ -25,6 +25,12 @@ class WorkOrder(BaseModel):
         nullable=False,
     )
 
+    assigned_by = db.Column(
+        db.UUID(as_uuid=True),
+        db.ForeignKey("users.id"),
+    nullable=False,
+)
+
     scope_of_work = db.Column(
         db.Text,
         nullable=False,
