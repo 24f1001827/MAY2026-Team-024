@@ -67,13 +67,14 @@ class ComplaintService:
 
             for image in images:
 
-                image_url = upload_image(image)
+                uploaded = upload_image(image)
 
                 ComplaintImageRepository.create(
                     {
                         "complaint_id": complaint.id,
                         "uploaded_by": user.id,
-                        "image_url": image_url,
+                        "image_url": uploaded["image_url"],
+                        "public_id": uploaded["public_id"],
                     }
                 )
 
