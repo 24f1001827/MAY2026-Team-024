@@ -18,6 +18,7 @@ from app.schemas import (
     OfficerProposalListSchema,
     OfficerProposalDetailSchema,
     UpdateProposalStatusSchema,
+    CreateWorkOrderSchema,
 )
 from app.services import OfficerService
 
@@ -639,6 +640,171 @@ def update_proposal_status(
 
     except Exception as err:
 
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
+
+@officer_bp.post("/proposals/<int:proposal_id>/work-order")
+@jwt_required()
+@role_required(UserRole.OFFICER)
+def create_work_order(proposal_id):
+    """
+    Create work order.
+    """
+
+    try:
+        data = CreateWorkOrderSchema().load(request.get_json())
+
+        work_order = OfficerService.create_work_order(
+            get_jwt_identity(),
+            proposal_id,
+            data,
+        )
+        response = {
+            "id": work_order.id,
+            "tender_id": work_order.tender_id,
+            "agency_id": str(work_order.agency_id),
+            "assigned_by": str(work_order.assigned_by),
+            "scope_of_work": work_order.scope_of_work,
+            "status": work_order.status.value,
+            "remarks": work_order.remarks,
+            "created_at": (
+                work_order.created_at.isoformat() if work_order.created_at else None
+            ),
+            "updated_at": (
+                work_order.updated_at.isoformat() if work_order.updated_at else None
+            ),
+        }
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Work order created successfully.",
+                    "data": response,
+                }
+            ),
+            201,
+        )
+
+    except ValidationError as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Validation failed.",
+                    "errors": err.messages,
+                }
+            ),
+            422,
+        )
+
+    except PermissionError as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            403,
+        )
+
+    except ValueError as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            400,
+        )
+
+    except Exception as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
+
+@officer_bp.patch("/work-orders/<int:work_order_id>/verify")
+@jwt_required()
+@role_required(UserRole.OFFICER)
+def verify_work_order(
+    work_order_id,
+):
+    """
+    Verify completed work order.
+    """
+
+    try:
+
+        work_order = OfficerService.verify_work_order(
+            get_jwt_identity(),
+            work_order_id,
+        )
+
+        response = {
+            "id": work_order.id,
+            "status": work_order.status.value,
+            "verified_by": work_order.verified_by,
+            "verified_at": (
+                work_order.verified_at.isoformat() if work_order.verified_at else None
+            ),
+            "updated_at": (
+                work_order.updated_at.isoformat() if work_order.updated_at else None
+            ),
+        }
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Work order verified successfully.",
+                    "data": response,
+                }
+            ),
+            200,
+        )
+
+    except PermissionError as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            403,
+        )
+
+    except ValueError as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            400,
+        )
+
+    except Exception as err:
         return (
             jsonify(
                 {
