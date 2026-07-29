@@ -20,5 +20,15 @@ from .officer_schema import (
     OfficerComplaintDetailSchema,
     CreateTenderSchema,
     TenderResponseSchema,
+    OfficerProposalListSchema,
+    OfficerProposalDetailSchema,
+    UpdateProposalStatusSchema,
 )
 from .admin_budget_schema import AllocateBudgetSchema
+from .agency_schema import (
+    TenderListSchema,
+    TenderDetailSchema,
+    CreateProposalSchema,
+    ProposalResponseSchema,
+    AgencyProposalListSchema
+)
