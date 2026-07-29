@@ -9,7 +9,7 @@ from app.middleware import role_required
 from app.models import UserRole
 from app.schemas import TenderListSchema,TenderDetailSchema, CreateProposalSchema,ProposalResponseSchema,AgencyProposalListSchema
 from app.services import AgencyService
-from app.utils import upload_document
+from app.utils import upload_document,validate_document
 
 agency_bp = Blueprint(
     "agency",
@@ -133,6 +133,8 @@ def submit_proposal(tender_id):
         proposal_document = request.files.get(
             "proposal_document"
         )
+
+        validate_document(proposal_document)
 
         if not proposal_document:
             raise ValueError("Proposal document is required")
