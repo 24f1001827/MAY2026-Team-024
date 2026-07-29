@@ -71,7 +71,7 @@ class AgencyService:
                 "Tender is not open."
             )
 
-        if tender.closing_date < datetime.now():
+        if tender.closing_date < datetime.now(IST):
             raise ValueError(
                 "Tender submission deadline has passed."
             )
