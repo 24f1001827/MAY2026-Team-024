@@ -9,3 +9,4 @@ from .review_report_repository import ReviewReportRepository
 from .tender_repository import TenderRepository
 from .agency_proposal_repository import AgencyProposalRepository
 from .work_order_repository import WorkOrderRepository
+from .notification_repository import NotificationRepository
