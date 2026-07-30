@@ -64,7 +64,7 @@ class AgencyProposalRepository:
         Retrieve proposal by ID.
         """
 
-        return AgencyProposal.query.get(proposal_id,deleted_at=None)
+        return AgencyProposal.query.filter_by(id=proposal_id, deleted_at=None).first()
 
     @staticmethod
     def reject_other_proposals(

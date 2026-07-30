@@ -1,5 +1,6 @@
 from app.models import Agency
 from app.extensions import db
+from app.models import User
 
 class AgencyRepository:
     """
@@ -71,3 +72,15 @@ class AgencyRepository:
         return Agency.query.filter_by(
             license_number=license_number
         ).first()
+
+    @staticmethod
+    def get_all():
+        """
+        Retrieve all avtive agencies.
+        
+        """
+
+        return Agency.query.join(Agency.user).filter(
+                        User.status == "ACTIVE",
+                        Agency.deleted_at.is_(None)
+                    ).all()
