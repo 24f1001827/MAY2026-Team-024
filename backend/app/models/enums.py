@@ -88,10 +88,18 @@ class ReviewDecision(Enum):
 
 
 class NotificationType(Enum):
+    COMPLAINT_CREATED="ComplaintCreated"
+    COMPLAINT_ASSIGNED="ComplaintAssigned"
+    ASSIGNMENT_ACCEPTED="AssignmentAccepted"
+    ASSIGNMENT_REJECTED="AssignmentRejected"
+    REVIEW_COMPLETED="ReviewCompleted"
+    BUDGET_REQUESTED="BudgetRequested"
+    BUDGET_ALLOCATED="BudgetAllocated"
     STATUS_CHANGE = "StatusChange"
-    ASSIGNMENT = "Assignment"
-    REVIEW_DONE = "ReviewDone"
     TENDER_PUBLISHED = "TenderPublished"
+    TENDER_ALLOTED = "TenderAlloted"
+    WORK_ORDER_CREATED="WorkOrderCreated"
+    WORK_ORDER_UPDATED="WorkOrderUpdated"
     SLA_BREACH = "SLABreach"
-    BUDGET_PENDING = "BudgetPending"
-    CLOSURE = "Closure"
+    COMPLAINT_RESOLVED = "ComplaintResolved"
+    COMPLAINT_CLOSURE = "ComplaintClosure"
