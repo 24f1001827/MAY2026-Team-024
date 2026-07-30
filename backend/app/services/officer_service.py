@@ -7,6 +7,9 @@ from app.models import (
     TenderStatus,
     ProposalStatus,
     WorkOrderStatus,
+    NotificationType,
+    User,
+    UserRole
 )
 
 from app.repositories import (
@@ -17,9 +20,14 @@ from app.repositories import (
     TenderRepository,
     AgencyProposalRepository,
     WorkOrderRepository,
+    AgencyRepository,
+    UserRepository
 )
 
+from app.services import NotificationService
+
 from app.extensions import db
+
 
 
 class OfficerService:
@@ -93,6 +101,20 @@ class OfficerService:
 
         ComplaintAssignmentRepository.update()
 
+        admin=User.query.filter_by(role=UserRole.ADMIN).first()
+        
+        NotificationService.create_notification(
+            {
+                "user_id": admin.id,
+                "type": NotificationType.ASSIGNMENT_ACCEPTED,
+                "title": "Assignment Accepted",
+                "message": (
+                    "An officer has accepted complaint."
+                    f"'complaint ID: {assignment.complaint.id}, Complaint title: {assignment.complaint.title}'."
+                ),
+            }
+        )
+
         return assignment
 
     @staticmethod
@@ -120,6 +142,20 @@ class OfficerService:
         assignment.status = AssignmentStatus.REJECTED
 
         ComplaintAssignmentRepository.update()
+
+        admin=User.query.filter_by(role=UserRole.ADMIN).first()
+
+        NotificationService.create_notification(
+            {
+                "user_id": admin.id,
+                "type": NotificationType.ASSIGNMENT_REJECTED,
+                "title": "Assignment Rejected",
+                "message": (
+                    f"The assigned officer rejected complaint "
+                    f"'complaint ID: {assignment.complaint.id}, Complaint title: {assignment.complaint.title}'."
+                ),
+            }
+        )
 
         return assignment
 
@@ -173,6 +209,17 @@ class OfficerService:
         complaint.status = ComplaintStatus.REPORT_SUBMITTED
 
         db.session.commit()
+        NotificationService.create_notification(
+            {
+                "user_id": complaint.citizen_id,
+                "type": NotificationType.REVIEW_COMPLETED,
+                "title": "Review Completed",
+                "message": (
+                    "The inspection for your complaint has been completed."
+                    f"'complaint ID: {complaint.id}, Complaint title: {complaint.title}'."
+                ),
+            }
+        )
 
         return report
 
@@ -213,6 +260,20 @@ class OfficerService:
         complaint.status = ComplaintStatus.AWAITING_BUDGET
 
         db.session.commit()
+
+        admin=User.query.filter_by(role=UserRole.ADMIN).first()
+
+        NotificationService.create_notification(
+            {
+                "user_id": admin.id,
+                "type": NotificationType.BUDGET_REQUESTED,
+                "title": "Budget Requested",
+                "message": (
+                    f"A budget request has been submitted for "
+                    f"complaint '{complaint.title}'."
+                ),
+            }
+        )
 
         return complaint
 
@@ -274,6 +335,22 @@ class OfficerService:
         complaint.status = ComplaintStatus.TENDER_NOTIFICATION_ISSUED
 
         db.session.commit()
+        agencies = AgencyRepository.get_all()
+
+        for agency in agencies:
+            NotificationService.create_notification(
+                {
+                    "user_id": agency.user_id,
+                    "type": NotificationType.TENDER_PUBLISHED,
+                    "title": "New Tender Published",
+                    "message": (
+                        f"A new tender is available for "
+                        f"'Complaint ID: {complaint.id}, Complaint title:{ complaint.title }'."
+                    ),
+                }
+            )
+
+        
 
         return tender
 
@@ -409,9 +486,24 @@ class OfficerService:
             tender = proposal.tender
             tender.status = TenderStatus.AWARDED
 
+
         proposal.status = new_status
 
         AgencyProposalRepository.update()
+
+        if new_status == ProposalStatus.ACCEPTED:
+            NotificationService.create_notification(
+                {
+                    "user_id": proposal.agency.user_id,
+                    "type": NotificationType.TENDER_ALLOTED,
+                    "title": "Tender Awarded",
+                    "message": (
+                        f"Congratulations! Your proposal has been selected for complaint {proposal.tender.complaint_id}. Work will be assigned to you soon"
+                    ),
+                }
+            )
+        
+
 
         return proposal
 
@@ -474,9 +566,19 @@ class OfficerService:
         )
         # tender.complaint.status=ComplaintStatus.WORK_IN_PROGRESS
         # tender.status=TenderStatus.CLOSED
-        
 
         db.session.commit()
+        NotificationService.create_notification(
+            {
+                "user_id": work_order.agency.user_id,
+                "type": NotificationType.WORK_ORDER_CREATED,
+                "title": "Work Order Created",
+                "message": (
+                    "A work order has been assigned to your agency for the complaint "
+                    f"'complaint ID: {work_order.tender.complaint.id}, Complaint title: {work_order.tender.complaint.title}'."
+                ),
+            }
+        )
 
         return work_order
 
@@ -494,9 +596,7 @@ class OfficerService:
         )
 
         if officer is None:
-            raise ValueError(
-                "Officer not found."
-            )
+            raise ValueError("Officer not found.")
 
         work_order = WorkOrderRepository.get_by_id(
             work_order_id,
@@ -516,19 +616,13 @@ class OfficerService:
         )
 
         if assignment is None:
-            raise PermissionError(
-                "You are not authorized to verify this work order."
-            )
+            raise PermissionError("You are not authorized to verify this work order.")
 
         if work_order.status != WorkOrderStatus.COMPLETED:
-            raise ValueError(
-                "Only completed work orders can be verified."
-            )
+            raise ValueError("Only completed work orders can be verified.")
 
         if not work_order.completion_proof_url:
-            raise ValueError(
-                "Completion proof has not been uploaded."
-            )
+            raise ValueError("Completion proof has not been uploaded.")
 
         work_order.status = WorkOrderStatus.VERIFIED
         work_order.verified_by = officer.user_id
@@ -537,5 +631,29 @@ class OfficerService:
         work_order.tender.complaint.status = ComplaintStatus.RESOLVED
 
         db.session.commit()
+
+        admin=User.query.filter_by(role=UserRole.ADMIN).first()
+
+        NotificationService.create_notification(
+            {
+                "user_id": admin.id,
+                "type": NotificationType.COMPLAINT_RESOLVED,
+                "title": "Complaint Resolved",
+                "message": (
+                    f"The complaint : {assignment.complaint.title} complaint Id: {assignment.complaint.id} has been resolved."
+                ),
+            }
+        )
+
+        NotificationService.create_notification(
+            {
+                "user_id": assignment.complaint.citizen_id,
+                "type": NotificationType.COMPLAINT_RESOLVED,
+                "title": "Complaint Resolved",
+                "message": (
+                    f"Your complaint : {assignment.complaint.title} complaint Id: {assignment.complaint.id} has been resolved."
+                ),
+            }
+        )
 
         return work_order

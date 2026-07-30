@@ -12,7 +12,8 @@ from app.routes import (
     admin_complaint_bp,
     admin_user_bp,
     officer_bp,
-    agency_bp
+    agency_bp,
+    notification_bp
 )
 
 from app.extensions import init_google_oauth, configure_cloudinary
@@ -57,4 +58,5 @@ def create_app():
     app.register_blueprint(admin_user_bp)
     app.register_blueprint(officer_bp)
     app.register_blueprint(agency_bp)
+    app.register_blueprint(notification_bp)
     return app

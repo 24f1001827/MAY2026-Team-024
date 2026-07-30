@@ -8,6 +8,7 @@ from app.models import (
     ComplaintStatus,
     AssignmentStatus,
     AssignedBy,
+    NotificationType,
 )
 
 from app.repositories import (
@@ -15,8 +16,11 @@ from app.repositories import (
     OfficerRepository,
     ComplaintAssignmentRepository,
     ComplaintRepository,
-    OfficerRepository
+    OfficerRepository,
+    
 )
+
+from app.services import NotificationService
 
 
 class AdminComplaintService:
@@ -106,6 +110,18 @@ class AdminComplaintService:
         complaint.status = ComplaintStatus.ASSIGNED
 
         db.session.commit()
+        NotificationService.create_notification(
+            {
+                "user_id": officer.user_id,
+                "type": NotificationType.COMPLAINT_ASSIGNED,
+                "title": "Complaint Assigned",
+                "message": (
+                    f"You have been assigned complaint "
+                    f"'complaint ID: {complaint.id}, Complaint title: {complaint.title}'."
+                ),
+            }
+        )
+                
 
         return assignment
 

@@ -4,10 +4,18 @@ from app.repositories import (
     AgencyRepository,
     WorkOrderRepository,
 )
-from app.models import TenderStatus, ProposalStatus, WorkOrderStatus, ComplaintStatus ,IST
+from app.models import (
+    TenderStatus,
+    ProposalStatus,
+    WorkOrderStatus,
+    ComplaintStatus,
+    IST,
+    NotificationType
+)
 from app.extensions import db
 from datetime import datetime
 from app.utils import upload_document
+from app.services import NotificationService
 
 
 class AgencyService:
@@ -65,9 +73,7 @@ class AgencyService:
             raise ValueError("Tender is not open.")
 
         if tender.closing_date < datetime.now(IST):
-            raise ValueError(
-                "Tender submission deadline has passed."
-            )
+            raise ValueError("Tender submission deadline has passed.")
 
         existing = AgencyProposalRepository.get_by_tender_and_agency(
             tender_id,
@@ -146,23 +152,17 @@ class AgencyService:
         )
 
         if agency is None:
-            raise ValueError(
-                "Agency not found."
-            )
+            raise ValueError("Agency not found.")
 
         work_order = WorkOrderRepository.get_by_id(
             work_order_id,
         )
 
         if work_order is None:
-            raise ValueError(
-                "Work order not found."
-            )
+            raise ValueError("Work order not found.")
 
         if work_order.agency_id != agency.user_id:
-            raise PermissionError(
-                "You are not authorized to access this work order."
-            )
+            raise PermissionError("You are not authorized to access this work order.")
 
         return work_order
 
@@ -188,9 +188,7 @@ class AgencyService:
             raise ValueError("Work order not found.")
 
         if work_order.agency_id != agency.user_id:
-            raise PermissionError(
-                "You are not authorized to update this work order."
-            )
+            raise PermissionError("You are not authorized to update this work order.")
 
         status = data["status"]
 
@@ -201,14 +199,36 @@ class AgencyService:
             work_order.status = WorkOrderStatus.IN_PROGRESS
             work_order.start_date = datetime.now(IST).date()
 
+            NotificationService.create_notification(
+                {
+                    "user_id": work_order.assigned_by,
+                    "type": NotificationType.WORK_ORDER_UPDATED,
+                    "title": "Work Order Updated",
+                    "message": (
+                        f"The work is in progress and the work order status has been updated to "
+                        f"{work_order.status.value}. for complaint ID: {work_order.tender.complaint.id}, Complaint title: {work_order.tender.complaint.title}."
+                    ),
+                }
+            )
+
+            NotificationService.create_notification(
+                {
+                    "user_id": work_order.tender.complaint.citizen_id,
+                    "type": NotificationType.WORK_ORDER_UPDATED,
+                    "title": "Work Order Updated",
+                    "message": (
+                        f"The work is in progress and the work order status has been updated to "
+                        f"{work_order.status.value}. for complaint ID: {work_order.tender.complaint.id}, Complaint title: {work_order.tender.complaint.title}."
+                    ),
+                }
+            )
+
         elif (
             work_order.status == WorkOrderStatus.IN_PROGRESS
             and status == WorkOrderStatus.COMPLETED
         ):
             if completion_proof is None:
-                raise ValueError(
-                    "Completion proof is required."
-                )
+                raise ValueError("Completion proof is required.")
 
             proof_url = upload_document(
                 completion_proof,
@@ -219,14 +239,21 @@ class AgencyService:
             work_order.end_date = datetime.now(IST).date()
             work_order.completion_proof_url = proof_url["document_url"]
 
-            work_order.tender.complaint.status = (
-                ComplaintStatus.WORK_COMPLETED
+            work_order.tender.complaint.status = ComplaintStatus.WORK_COMPLETED
+            NotificationService.create_notification(
+                {
+                    "user_id": work_order.assigned_by,
+                    "type": NotificationType.WORK_ORDER_UPDATED,
+                    "title": "Work Order Updated",
+                    "message": (
+                            f"The work is completed and the work order status has been updated to "
+                            f"{work_order.status.value}. for complaint ID: {work_order.tender.complaint.id}, Complaint title: {work_order.tender.complaint.title}."
+                            ),
+                }
             )
 
         else:
-            raise ValueError(
-                "Invalid status transition."
-            )
+            raise ValueError("Invalid status transition.")
 
         db.session.commit()
 

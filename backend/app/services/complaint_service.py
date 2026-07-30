@@ -5,10 +5,11 @@ from app.repositories import (
     ComplaintImageRepository
 )
 
-from app.models import ComplaintPriority, ComplaintStatus,UserRole
+from app.models import ComplaintPriority, ComplaintStatus,UserRole,NotificationType
 from app.extensions import db
 from flask_jwt_extended import get_jwt_identity
 from app.utils import upload_image,delete_image
+from app.services import NotificationService
 
 
 class ComplaintService:
@@ -80,6 +81,18 @@ class ComplaintService:
 
             db.session.commit()
 
+            NotificationService.create_notification(
+                {
+                    "user_id": complaint.citizen_id,
+                    "type": NotificationType.COMPLAINT_CREATED,
+                    "title": "Complaint Submitted",
+                    "message": (
+                        f"Your complaint '{complaint.title}' has been submitted "
+                        f"successfully.your complaint id is {complaint.id}"
+                    ),
+                }
+            )
+            
             return complaint
 
         except Exception:
