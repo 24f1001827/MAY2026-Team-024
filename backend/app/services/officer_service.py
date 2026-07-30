@@ -506,9 +506,7 @@ class OfficerService:
             raise ValueError(
                 "Work order not found."
             )
-        print("Before assignment")
-        print(officer.user_id)
-        print(work_order.tender.complaint_id)
+    
         assignment = (
             ComplaintAssignmentRepository
             .get_by_officer_and_complaint(
@@ -516,7 +514,6 @@ class OfficerService:
                 work_order.tender.complaint_id
             )
         )
-        print(assignment.officer_id)
 
         if assignment is None:
             raise PermissionError(
