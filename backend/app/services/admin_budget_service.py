@@ -2,7 +2,7 @@ from app.extensions import db
 from app.models import ComplaintStatus, NotificationType
 from app.repositories import ComplaintRepository
 from app.repositories import ReviewReportRepository,ComplaintAssignmentRepository
-from app.services import NotificationService
+from app.services.notification_service import NotificationService
 
 
 class AdminBudgetService:
@@ -35,6 +35,9 @@ class AdminBudgetService:
             raise ValueError("Review report not found.")
 
         assignment=ComplaintAssignmentRepository.get_by_complaint_id(complaint_id)
+
+        if assignment is None:
+            raise ValueError("This complaint is not assigned to any officer")
 
         amount = data["amount"]
 

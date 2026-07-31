@@ -16,11 +16,10 @@ from app.repositories import (
     OfficerRepository,
     ComplaintAssignmentRepository,
     ComplaintRepository,
-    OfficerRepository,
     
 )
 
-from app.services import NotificationService
+from app.services.notification_service import NotificationService
 
 
 class AdminComplaintService:

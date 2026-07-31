@@ -15,7 +15,7 @@ from app.models import (
 from app.extensions import db
 from datetime import datetime
 from app.utils import upload_document
-from app.services import NotificationService
+from app.services.notification_service import NotificationService
 
 
 class AgencyService:
