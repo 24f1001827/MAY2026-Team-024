@@ -9,7 +9,7 @@ from app.models import ComplaintPriority, ComplaintStatus,UserRole,NotificationT
 from app.extensions import db
 from flask_jwt_extended import get_jwt_identity
 from app.utils import upload_image,delete_image
-from app.services import NotificationService
+from app.services.notification_service import NotificationService
 
 
 class ComplaintService:

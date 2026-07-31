@@ -1,6 +1,6 @@
 from app.models import Agency
 from app.extensions import db
-from app.models import User
+from app.models import User,UserStatus
 
 class AgencyRepository:
     """
@@ -81,6 +81,6 @@ class AgencyRepository:
         """
 
         return Agency.query.join(Agency.user).filter(
-                        User.status == "ACTIVE",
+                        User.status == UserStatus.ACTIVE,
                         Agency.deleted_at.is_(None)
                     ).all()

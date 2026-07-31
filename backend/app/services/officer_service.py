@@ -24,7 +24,7 @@ from app.repositories import (
     UserRepository
 )
 
-from app.services import NotificationService
+from app.services.notification_service import NotificationService
 
 from app.extensions import db
 
