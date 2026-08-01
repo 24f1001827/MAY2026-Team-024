@@ -1,6 +1,6 @@
 import re
 
-from marshmallow import Schema, ValidationError, fields, validates
+from marshmallow import Schema, ValidationError, fields, validates,validate
 
 
 class ComplaintSchema(Schema):
@@ -222,3 +222,12 @@ class AssignComplaintSchema(Schema):
             raise ValidationError(
                 "Assignment note cannot exceed 500 characters."
             )
+
+class ReopenComplaintSchema(Schema):
+    reason = fields.String(
+        required=True,
+        validate=validate.Length(
+            min=10,
+            max=500,
+        ),
+    )

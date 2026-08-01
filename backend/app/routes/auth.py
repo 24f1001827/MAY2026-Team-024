@@ -16,8 +16,7 @@ from app.schemas import (
 from app.services import AuthService
 from app.extensions import oauth
 from app.tasks.email_task import send_citizen_register_email, send_agency_register_email,send_officer_register_email
-from backend.app.models import user
-from backend.app.models import user
+from app.models import User
 
 auth_bp = Blueprint(
     "auth",

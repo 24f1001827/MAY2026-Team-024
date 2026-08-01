@@ -1,10 +1,10 @@
 from flask import Blueprint, jsonify, request
 from marshmallow import ValidationError
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required,get_jwt_identity
 
 from app.models import UserRole
 from app.middleware import role_required
-from app.schemas import ComplaintSchema,ComplaintResponseSchema
+from app.schemas import ComplaintSchema, ComplaintResponseSchema, ReopenComplaintSchema
 from app.services import ComplaintService
 from app.utils import validate_images
 
@@ -43,14 +43,11 @@ def create_complaint():
     """
 
     try:
-        validated_data = ComplaintSchema().load(
-            request.form.to_dict()
-        )
+        validated_data = ComplaintSchema().load(request.form.to_dict())
 
         images = request.files.getlist("images")
         validate_images(images)
 
-        
         complaint = ComplaintService.create_complaint(
             validated_data,
             images,
@@ -89,7 +86,6 @@ def create_complaint():
             ),
             404,
         )
-
 
     except PermissionError as err:
         return (
@@ -144,9 +140,7 @@ def get_my_complaints():
                 {
                     "success": True,
                     "message": "Complaints retrieved successfully.",
-                    "data": ComplaintResponseSchema(
-                        many=True
-                    ).dump(complaints),
+                    "data": ComplaintResponseSchema(many=True).dump(complaints),
                 }
             ),
             200,
@@ -185,6 +179,7 @@ def get_my_complaints():
             ),
             500,
         )
+
 
 @complaint_bp.get("/<uuid:complaint_id>")
 @jwt_required()
@@ -211,18 +206,14 @@ def get_complaint(complaint_id):
 
     try:
 
-        complaint = ComplaintService.get_complaint_by_id(
-            complaint_id
-        )
+        complaint = ComplaintService.get_complaint_by_id(complaint_id)
 
         return (
             jsonify(
                 {
                     "success": True,
                     "message": "Complaint retrieved successfully.",
-                    "data": ComplaintResponseSchema().dump(
-                        complaint
-                    ),
+                    "data": ComplaintResponseSchema().dump(complaint),
                 }
             ),
             200,
@@ -261,6 +252,7 @@ def get_complaint(complaint_id):
             ),
             500,
         )
+
 
 @complaint_bp.put("/<uuid:complaint_id>")
 @jwt_required()
@@ -311,9 +303,7 @@ def update_complaint(complaint_id):
                 {
                     "success": True,
                     "message": "Complaint updated successfully.",
-                    "data": ComplaintResponseSchema().dump(
-                        complaint
-                    ),
+                    "data": ComplaintResponseSchema().dump(complaint),
                 }
             ),
             200,
@@ -365,6 +355,7 @@ def update_complaint(complaint_id):
             500,
         )
 
+
 @complaint_bp.delete("/<uuid:complaint_id>")
 @jwt_required()
 @role_required(UserRole.CITIZEN)
@@ -390,9 +381,7 @@ def delete_complaint(complaint_id):
 
     try:
 
-        ComplaintService.delete_complaint(
-            complaint_id
-        )
+        ComplaintService.delete_complaint(complaint_id)
 
         return (
             jsonify(
@@ -427,6 +416,152 @@ def delete_complaint(complaint_id):
         )
 
     except Exception as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
+
+@complaint_bp.patch("/<uuid:complaint_id>/reopen")
+@jwt_required()
+@role_required(UserRole.CITIZEN)
+def reopen_complaint(
+    complaint_id,
+):
+    """
+    Reopen a resolved complaint.
+    """
+
+    try:
+
+        data = ReopenComplaintSchema().load(request.get_json())
+
+        complaint = ComplaintService.reopen_complaint(
+            complaint_id,
+            data,
+        )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Complaint reopened successfully.",
+                    "data": ComplaintResponseSchema().dump(complaint),
+                }
+            ),
+            200,
+        )
+
+    except ValidationError as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Validation failed.",
+                    "errors": err.messages,
+                }
+            ),
+            422,
+        )
+
+    except ValueError as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            404,
+        )
+
+    except PermissionError as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            403,
+        )
+
+    except Exception as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
+
+@complaint_bp.patch("/<uuid:complaint_id>/close")
+@jwt_required()
+@role_required(UserRole.CITIZEN)
+def close_complaint(
+    complaint_id,
+):
+    """
+    Close a resolved complaint.
+    """
+
+    try:
+
+        complaint = ComplaintService.close_complaint(
+            get_jwt_identity(),
+            complaint_id,
+        )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Complaint closed successfully.",
+                    "data": {
+                        "id": complaint.id,
+                        "status": complaint.status.value,
+                    },
+                }
+            ),
+            200,
+        )
+
+    except ValueError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            400,
+        )
+
+    except PermissionError as err:
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            403,
+        )
+
+    except Exception as err:
+
         return (
             jsonify(
                 {
