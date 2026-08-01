@@ -41,6 +41,7 @@ class ComplaintStatus(Enum):
     WORK_IN_PROGRESS = "WorkInProgress"
     WORK_COMPLETED = "WorkCompleted"
     RESOLVED = "Resolved"
+    REOPENED = "Reopened"
     CLOSED = "Closed"
 
 
@@ -76,8 +77,10 @@ class ProposalStatus(Enum):
 class WorkOrderStatus(Enum):
     ASSIGNED = "Assigned"
     IN_PROGRESS = "InProgress"
+    INCOMPLETE = "INCOMPLETE"
     COMPLETED = "Completed"
     VERIFIED = "Verified"
+    CLOSED="Closed"
     CANCELLED = "Cancelled"
 
 
