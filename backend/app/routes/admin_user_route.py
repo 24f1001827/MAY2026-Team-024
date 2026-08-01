@@ -9,6 +9,7 @@ from app.schemas import (
     UpdateUserStatusSchema,
 )
 from app.services import AdminUserService
+from app.tasks.email_task import send_agency_approve_email,send_officer_approve_email
 
 admin_user_bp = Blueprint(
     "admin_user",
@@ -109,6 +110,12 @@ def update_user_status(user_id):
             user_id,
             data,
         )
+
+        if user.role==UserRole.AGENCY:
+            send_agency_approve_email.delay("Agency approved",[user.email],user.name,user.updated_at,user.status.value)
+        elif user.role==UserRole.OFFICER:
+            send_officer_approve_email.delay("Officer account approved",[user.email],user.name,user.officer.department.name,user.updated_at,user.status.value)
+
 
         return (
             jsonify(

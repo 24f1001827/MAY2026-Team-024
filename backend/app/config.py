@@ -24,3 +24,18 @@ class Config:
     CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
     
     CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
+
+    CELERY = {
+    "broker_url": os.getenv("CELERY_BROKER_URL"),
+    "result_backend": os.getenv("CELERY_RESULT_BACKEND"),
+    "task_ignore_result": True,
+    }
+
+    MAIL_SERVER = os.getenv("MAIL_SERVER")
+    MAIL_PORT = int(os.getenv("MAIL_PORT"))
+    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS") == "True"
+    MAIL_USE_SSL = os.getenv("MAIL_USE_SSL") == "True"
+
+    MAIL_USERNAME = os.getenv("MAIL_USERNAME")
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
+    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER")

@@ -15,6 +15,9 @@ from app.schemas import (
 
 from app.services import AuthService
 from app.extensions import oauth
+from app.tasks.email_task import send_citizen_register_email, send_agency_register_email,send_officer_register_email
+from backend.app.models import user
+from backend.app.models import user
 
 auth_bp = Blueprint(
     "auth",
@@ -43,6 +46,9 @@ def register_citizen():
         data = RegisterCitizenSchema().load(request.get_json())
 
         user = AuthService.register_citizen(data)
+
+        if user:
+            send_citizen_register_email.delay("Welcome to CivicConnect",[user.email],user.name)
 
         return (
             jsonify(
@@ -122,6 +128,9 @@ def register_agency():
         )
 
         user = AuthService.register_agency(data)
+
+        if user:
+            send_agency_register_email.delay("Welcome to CivicConnect",[user.email],user.name,user.created_at,user.status.value)
 
         return (
             jsonify(
@@ -203,6 +212,9 @@ def register_officer():
         )
 
         user = AuthService.register_officer(data)
+
+        if user:
+            send_officer_register_email.delay("Welcome to CivicConnect",[user.email],user.name,user.officer.department.name,user.created_at,user.status.value)
 
         return (
             jsonify(
