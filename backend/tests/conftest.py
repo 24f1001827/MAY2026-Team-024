@@ -1,9 +1,10 @@
 import os
 from unittest.mock import patch
+
 import pytest
 from flask_jwt_extended import create_access_token
 
-# Ensure Config reads test safe values when the application is imported.
+# Ensure Config reads test-safe values when the application is imported.
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("JWT_SECRET_KEY", "test-jwt-secret-key")
 os.environ.setdefault("DATABASE_URI", "sqlite:///:memory:")
@@ -45,3 +46,7 @@ def officer_headers(app):
 @pytest.fixture
 def citizen_headers(app):
     return _jwt_headers(app, "citizen-test-user", UserRole.CITIZEN)
+
+@pytest.fixture
+def agency_headers(app):
+    return _jwt_headers(app, "agency-test-user", UserRole.AGENCY)
