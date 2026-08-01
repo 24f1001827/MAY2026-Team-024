@@ -2,9 +2,11 @@ from flask import Flask
 
 from app.config import Config
 
-from app.extensions import db, migrate, jwt, cors, oauth
+from app.extensions import db, migrate, jwt, cors, oauth, mail
 
 from app.models import *
+
+from app.celery_app import celery_init_app
 
 from app.routes import (
     auth_bp,
@@ -41,6 +43,8 @@ def create_app():
     cors.init_app(app)
 
     oauth.init_app(app)
+
+    mail.init_app(app)
 
     init_google_oauth(app)
 
