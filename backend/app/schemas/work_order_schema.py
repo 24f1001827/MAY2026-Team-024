@@ -25,3 +25,12 @@ class UpdateWorkOrderStatusSchema(Schema):
         required=True,
         by_value=True,
     )
+
+class MarkWorkOrderIncompleteSchema(Schema):
+    remarks = fields.String(
+        required=True,
+        validate=validate.Length(
+            min=10,
+            max=500,
+        ),
+    )

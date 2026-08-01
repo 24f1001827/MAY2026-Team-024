@@ -19,6 +19,7 @@ from app.schemas import (
     OfficerProposalDetailSchema,
     UpdateProposalStatusSchema,
     CreateWorkOrderSchema,
+    MarkWorkOrderIncompleteSchema,
 )
 from app.services import OfficerService
 
@@ -802,6 +803,87 @@ def verify_work_order(
                 }
             ),
             400,
+        )
+
+    except Exception as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
+
+@officer_bp.patch("/work-orders/<int:work_order_id>/mark-incomplete")
+@jwt_required()
+@role_required(UserRole.OFFICER)
+def mark_work_order_incomplete(
+    work_order_id,
+):
+    """
+    Mark a work order as incomplete.
+    """
+
+    try:
+
+        data = MarkWorkOrderIncompleteSchema().load(request.get_json())
+
+        work_order = OfficerService.mark_work_order_incomplete(
+            get_jwt_identity(),
+            work_order_id,
+            data,
+        )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": ("Work order marked as incomplete successfully."),
+                    "data": {
+                        "id": work_order.id,
+                        "status": work_order.status.value,
+                    },
+                }
+            ),
+            200,
+        )
+
+    except ValidationError as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Validation failed.",
+                    "errors": err.messages,
+                }
+            ),
+            422,
+        )
+
+    except ValueError as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            400,
+        )
+
+    except PermissionError as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            403,
         )
 
     except Exception as err:

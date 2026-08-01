@@ -193,7 +193,7 @@ class AgencyService:
         status = data["status"]
 
         if (
-            work_order.status == WorkOrderStatus.ASSIGNED
+            (work_order.status == WorkOrderStatus.ASSIGNED)
             and status == WorkOrderStatus.IN_PROGRESS
         ):
             work_order.status = WorkOrderStatus.IN_PROGRESS
@@ -217,14 +217,16 @@ class AgencyService:
                     "type": NotificationType.WORK_ORDER_UPDATED,
                     "title": "Work Order Updated",
                     "message": (
-                        f"The work is in progress and the work order status has been updated to "
-                        f"{work_order.status.value}. for complaint ID: {work_order.tender.complaint.id}, Complaint title: {work_order.tender.complaint.title}."
+                        f" The work is in progress for complaint ID: {work_order.tender.complaint.id}, Complaint title: {work_order.tender.complaint.title}."
                     ),
                 }
             )
+            complaint = work_order.tender.complaint
+
+            complaint.status = ComplaintStatus.WORK_IN_PROGRESS
 
         elif (
-            work_order.status == WorkOrderStatus.IN_PROGRESS
+            work_order.status == WorkOrderStatus.IN_PROGRESS or work_order.status == WorkOrderStatus.INCOMPLETE
             and status == WorkOrderStatus.COMPLETED
         ):
             if completion_proof is None:

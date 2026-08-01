@@ -657,3 +657,79 @@ class OfficerService:
         )
 
         return work_order
+
+    @staticmethod
+    def mark_work_order_incomplete(
+        user_id,
+        work_order_id,
+        data,
+    ):
+        """
+        Mark a verified work order as incomplete.
+        """
+
+        officer = OfficerRepository.get_by_user_id(
+            user_id,
+        )
+
+        if officer is None:
+            raise PermissionError(
+                "Officer not found."
+            )
+
+        work_order = WorkOrderRepository.get_by_id(
+            work_order_id,
+        )
+
+        if work_order is None:
+            raise ValueError(
+                "Work order not found."
+            )
+
+        complaint = work_order.tender.complaint
+
+        assignment = ComplaintAssignmentRepository.get_by_complaint_id(
+            complaint.id,
+        )
+
+        if (
+            assignment is None
+            or assignment.officer_id != officer.user_id
+        ):
+            raise PermissionError(
+                "You are not assigned to this complaint."
+            )
+
+
+        if work_order.status != WorkOrderStatus.VERIFIED and work_order.status != WorkOrderStatus.COMPLETED:
+            raise ValueError(
+                "Only verified or completed work orders can be marked incomplete."
+            )
+
+        # only if the work order was verified, we reset the verification details
+        if work_order.status == WorkOrderStatus.VERIFIED:
+            work_order.verified_by = None
+            work_order.verified_at = None
+            work_order.end_date = None
+
+        work_order.status = WorkOrderStatus.INCOMPLETE
+
+        complaint.status = ComplaintStatus.WORK_IN_PROGRESS
+
+        NotificationService.create_notification(
+            {
+                "user_id": work_order.agency_id,
+                "type": NotificationType.WORK_ORDER_UPDATED,
+                "title": "Work Order Reopened",
+                "message": (
+                    f"The work order for complaint "
+                    f"'{complaint.title}' has been marked "
+                    "incomplete. Please complete the work as requested.\n"
+                    f"Remarks: {data['remarks']}"
+                ),
+            }
+        )
+
+        ComplaintRepository.update()
+
+        return work_order
