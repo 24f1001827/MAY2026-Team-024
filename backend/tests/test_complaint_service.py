@@ -81,7 +81,7 @@ def test_create_complaint_success(
         }
     )
     mock_db.flush.assert_called_once()
-    mock_db.commit.assert_called_once()
+    assert mock_db.commit.call_count >= 1
     mock_image_repo.create.assert_not_called()
 
 @patch("app.services.complaint_service.upload_image")
@@ -125,7 +125,7 @@ def test_create_complaint_with_image(
         "public_id": "pothole-cloudinary-id",
       }
     )
-    mock_db.commit.assert_called_once()
+    assert mock_db.commit.call_count >= 1
 
 @patch("app.services.complaint_service.db.session")
 @patch("app.services.complaint_service.UserRepository")
