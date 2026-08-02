@@ -1,19 +1,13 @@
-import { cookies } from "next/headers"
-
 import {
   mockComplaints,
   mockDepartments,
-  mockUsers,
 } from "@/components/shared/mock-data"
-import { MOCK_SESSION_COOKIE } from "@/lib/auth/mock-session"
+import { getCurrentUser } from "@/lib/auth/current-user"
 import { enrichComplaints } from "@/lib/utils/complaint/public-complaints"
 import { ComplaintsMapView } from "@/features/complaint/components/complaints-map-view"
 
 export default async function ComplaintsPage() {
-  const store = await cookies()
-  const user = mockUsers.find(
-    (u) => u.id === store.get(MOCK_SESSION_COOKIE)?.value
-  )
+  const user = await getCurrentUser()
   // Only citizens and admins can file a complaint.
   const canCreate = user?.role === "Citizen" || user?.role === "Admin"
 

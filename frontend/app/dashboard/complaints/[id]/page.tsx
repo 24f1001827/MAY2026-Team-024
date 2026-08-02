@@ -1,4 +1,3 @@
-import { cookies } from "next/headers"
 import { notFound, redirect } from "next/navigation"
 
 import { ComplaintDetail } from "@/features/complaint/components/complaint-detail"
@@ -8,7 +7,7 @@ import {
   mockDepartments,
   mockUsers,
 } from "@/components/shared/mock-data"
-import { MOCK_SESSION_COOKIE } from "@/lib/auth/mock-session"
+import { getCurrentUser } from "@/lib/auth/current-user"
 import { publicRoutes } from "@/nav"
 
 export default async function ComplaintDetailPage({
@@ -17,10 +16,7 @@ export default async function ComplaintDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const store = await cookies()
-  const user = mockUsers.find(
-    (u) => u.id === store.get(MOCK_SESSION_COOKIE)?.value
-  )
+  const user = await getCurrentUser()
 
   if (!user) redirect(publicRoutes.login)
 
