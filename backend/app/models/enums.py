@@ -77,7 +77,7 @@ class ProposalStatus(Enum):
 class WorkOrderStatus(Enum):
     ASSIGNED = "Assigned"
     IN_PROGRESS = "InProgress"
-    INCOMPLETE = "INCOMPLETE"
+    INCOMPLETE = "Incomplete"
     COMPLETED = "Completed"
     VERIFIED = "Verified"
     CLOSED="Closed"
