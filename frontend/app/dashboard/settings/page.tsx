@@ -10,7 +10,9 @@ export default async function SettingsPage() {
       user={{
         name: user.name,
         email: user.email,
-        phone: user.phone,
+        // The session snapshot doesn't carry phone; populate once a profile
+        // endpoint is integrated.
+        phone: "",
         role: user.role,
       }}
       manualAllotment={mockAppSettings.manualAllotment}
