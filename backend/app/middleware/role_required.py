@@ -30,6 +30,7 @@ def role_required(*allowed_roles):
                 return (
                     jsonify(
                         {
+                            "success": False,
                             "message": "You are not authorized to access this resource."
                         }
                     ),
