@@ -15,35 +15,44 @@ import { Button } from "@/components/shadcn/button"
 import { Input } from "@/components/shadcn/input"
 import { Checkbox } from "@/components/shadcn/checkbox"
 import { AuthShell, AuthAside } from "@/features/auth/components/auth-shell"
-import { mockUsers } from "@/components/shared/mock-data"
-import { setMockSession } from "@/lib/auth/mock-session"
+import { useLogin } from "@/hooks/auth"
 import { toast } from "@/lib/styles/toast-styles"
 import { publicRoutes, routes } from "@/nav"
 
 export function LoginForm() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
+  const login = useLogin()
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    // TODO: replace with real auth. For now, match a mock user by email so the
-    // dashboard reflects that user's role.
+    if (login.isPending) return
+
     const data = new FormData(event.currentTarget)
-    const email = String(data.get("email") ?? "")
-      .trim()
-      .toLowerCase()
-    const user = mockUsers.find((u) => u.email.toLowerCase() === email)
+    const email = String(data.get("email") ?? "").trim()
+    const password = String(data.get("password") ?? "")
 
-    if (!user) {
-      toast.error("No account found", {
-        description: "Check your email, or register a new account.",
-      })
-      return
-    }
-
-    setMockSession(user.id)
-    toast.success("Signed in", { description: `Welcome back, ${user.name}.` })
-    router.push(routes.href)
+    login.mutate(
+      { email, password },
+      {
+        onSuccess: (user) => {
+          toast.success("Signed in", {
+            description: `Welcome back, ${user.name}.`,
+          })
+          // Refresh so server components pick up the new session cookie.
+          router.push(routes.href)
+          router.refresh()
+        },
+        onError: (error) => {
+          toast.error("Couldn't sign in", {
+            description:
+              error instanceof Error
+                ? error.message
+                : "Please check your details and try again.",
+          })
+        },
+      },
+    )
   }
 
   return (
@@ -134,8 +143,14 @@ export function LoginForm() {
             Remember me
           </label>
 
-          <Button type="submit" variant="brand" size="lg" className="w-full">
-            Sign in
+          <Button
+            type="submit"
+            variant="brand"
+            size="lg"
+            className="w-full"
+            disabled={login.isPending}
+          >
+            {login.isPending ? "Signing in…" : "Sign in"}
           </Button>
         </form>
 

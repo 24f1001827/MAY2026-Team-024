@@ -21,9 +21,11 @@ import { Input } from "@/components/shadcn/input"
 import { NativeSelect } from "@/components/shadcn/native-select"
 import { AuthShell, AuthAside } from "@/features/auth/components/auth-shell"
 import { mockDepartments } from "@/components/shared/mock-data"
+import { useRegister } from "@/hooks/auth"
 import { toast } from "@/lib/styles/toast-styles"
 import { publicRoutes } from "@/nav"
 import type { UserRole } from "@/types/user"
+import type { RegisterInput } from "@/types/auth"
 
 type RegisterRole = Extract<UserRole, "Citizen" | "Officer" | "Agency">
 
@@ -90,15 +92,56 @@ export function RegisterForm({ role }: { role: RegisterRole }) {
   const config = ROLE_CONFIG[role]
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
+  const register = useRegister()
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    // TODO: wire up to auth backend (role = {role})
-    toast.success("Account created", {
-      description: `Your ${role} account is pending approval. Please sign in.`,
+    if (register.isPending) return
+
+    const data = new FormData(event.currentTarget)
+    const str = (key: string) => String(data.get(key) ?? "").trim()
+
+    // Map the form fields to the backend's snake_case payload per role.
+    const base = {
+      name: str("name"),
+      email: str("email"),
+      phone: str("phone"),
+      password: String(data.get("password") ?? ""),
+    }
+    const input: RegisterInput =
+      role === "Officer"
+        ? { role: "officer", payload: { ...base, department: str("department") } }
+        : role === "Agency"
+          ? {
+              role: "agency",
+              payload: {
+                ...base,
+                contact_person: str("contactPerson"),
+                registration_number: str("registrationNumber"),
+                license_number: str("licenseNumber"),
+              },
+            }
+          : { role: "citizen", payload: base }
+
+    register.mutate(input, {
+      onSuccess: () => {
+        toast.success("Account created", {
+          description:
+            role === "Citizen"
+              ? "You can sign in now."
+              : `Your ${role} account is pending approval. Please sign in once approved.`,
+        })
+        router.push(publicRoutes.login)
+      },
+      onError: (error) => {
+        toast.error("Couldn't create account", {
+          description:
+            error instanceof Error
+              ? error.message
+              : "Please review your details and try again.",
+        })
+      },
     })
-    // Redirect to login after successful registration.
-    router.push(publicRoutes.login)
   }
 
   return (
@@ -190,8 +233,8 @@ export function RegisterForm({ role }: { role: RegisterRole }) {
           {role === "Officer" && (
             <Field label="Department" htmlFor="departmentId">
               <NativeSelect
-                id="departmentId"
-                name="departmentId"
+                id="department"
+                name="department"
                 required
                 defaultValue=""
               >
@@ -199,7 +242,7 @@ export function RegisterForm({ role }: { role: RegisterRole }) {
                   Select a department
                 </option>
                 {mockDepartments.map((department) => (
-                  <option key={department.id} value={department.id}>
+                  <option key={department.id} value={department.name}>
                     {department.name}
                   </option>
                 ))}
@@ -258,8 +301,14 @@ export function RegisterForm({ role }: { role: RegisterRole }) {
             </div>
           </Field>
 
-          <Button type="submit" variant="brand" size="lg" className="w-full">
-            Create account
+          <Button
+            type="submit"
+            variant="brand"
+            size="lg"
+            className="w-full"
+            disabled={register.isPending}
+          >
+            {register.isPending ? "Creating account…" : "Create account"}
           </Button>
         </form>
 
