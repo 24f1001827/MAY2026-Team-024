@@ -1,4 +1,3 @@
-import { cookies } from "next/headers"
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 
@@ -8,8 +7,8 @@ import {
   ComplaintForm,
   COMPLAINT_FORM_ID,
 } from "@/features/complaint/components/complaint-form"
-import { mockComplaints, mockUsers } from "@/components/shared/mock-data"
-import { MOCK_SESSION_COOKIE } from "@/lib/auth/mock-session"
+import { mockComplaints } from "@/components/shared/mock-data"
+import { getCurrentUser } from "@/lib/auth/current-user"
 import { publicRoutes, routes } from "@/nav"
 
 export default async function EditComplaintPage({
@@ -18,10 +17,7 @@ export default async function EditComplaintPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const store = await cookies()
-  const user = mockUsers.find(
-    (u) => u.id === store.get(MOCK_SESSION_COOKIE)?.value
-  )
+  const user = await getCurrentUser()
 
   if (!user) redirect(publicRoutes.login)
   // Only admins and citizens can edit the whole complaint.
