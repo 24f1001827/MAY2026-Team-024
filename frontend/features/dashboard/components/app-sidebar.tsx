@@ -35,7 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/shadcn/dropdown-menu"
-import { clearMockSession } from "@/lib/auth/mock-session"
+import { useLogout } from "@/hooks/auth"
 import { toast } from "@/lib/styles/toast-styles"
 import {
   filterNavByAccess,
@@ -66,6 +66,7 @@ function collectPaths(items: NavItem[]): string[] {
 export function AppSidebar({ user }: { user: SidebarUser }) {
   const pathname = usePathname()
   const router = useRouter()
+  const logout = useLogout()
 
   // Nav access roles are lower-cased; the mock user role is title-cased.
   const role = user.role.toLowerCase() as Role
@@ -87,11 +88,15 @@ export function AppSidebar({ user }: { user: SidebarUser }) {
   }, [navItems, pathname])
 
   function handleSignOut() {
-    clearMockSession()
-    toast.success("Signed out", {
-      description: "You have been signed out of Rastro.",
+    logout.mutate(undefined, {
+      onSettled: () => {
+        toast.success("Signed out", {
+          description: "You have been signed out of Rastro.",
+        })
+        router.push(publicRoutes.login)
+        router.refresh()
+      },
     })
-    router.push(publicRoutes.login)
   }
 
   return (
