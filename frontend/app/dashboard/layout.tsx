@@ -1,5 +1,4 @@
 import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
 
 import {
   SidebarInset,
@@ -11,24 +10,16 @@ import { TooltipProvider } from "@/components/shadcn/tooltip"
 import { AppSidebar } from "@/features/dashboard/components/app-sidebar"
 import { Breadcrumbs } from "@/features/common/components/breadcrumbs"
 import { ThemeToggle } from "@/features/common/components/theme-toggle"
-import { mockUsers } from "@/components/shared/mock-data"
-import { MOCK_SESSION_COOKIE } from "@/lib/auth/mock-session"
-import { publicRoutes } from "@/nav"
+import { requireUser } from "@/lib/auth/current-user"
 
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // Mock session: resolve the signed-in user from the cookie set at login.
-  // No session → back to login. TODO: replace with the real auth layer.
-  const cookieStore = await cookies()
-  const uid = cookieStore.get(MOCK_SESSION_COOKIE)?.value
-  const currentUser = mockUsers.find((u) => u.id === uid)
-
-  if (!currentUser) {
-    redirect(publicRoutes.login)
-  }
+  // Resolve the signed-in user from the session cookie; no session → login.
+  const currentUser = await requireUser()
 
   // Restore the sidebar's collapsed state from its cookie to avoid a flash.
+  const cookieStore = await cookies()
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false"
 
   return (
