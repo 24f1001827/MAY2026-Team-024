@@ -1,4 +1,3 @@
-import { cookies } from "next/headers"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 
@@ -8,15 +7,11 @@ import {
   DepartmentForm,
   DEPARTMENT_FORM_ID,
 } from "@/features/department/components/department-form"
-import { mockUsers } from "@/components/shared/mock-data"
-import { MOCK_SESSION_COOKIE } from "@/lib/auth/mock-session"
+import { getCurrentUser } from "@/lib/auth/current-user"
 import { publicRoutes, routes } from "@/nav"
 
 export default async function NewDepartmentPage() {
-  const store = await cookies()
-  const user = mockUsers.find(
-    (u) => u.id === store.get(MOCK_SESSION_COOKIE)?.value
-  )
+  const user = await getCurrentUser()
 
   if (!user) redirect(publicRoutes.login)
   if (user.role !== "Admin") redirect(routes.href)
