@@ -8,12 +8,17 @@ from app.models import (
 )
 
 from .security import hash_password
+from sqlalchemy import inspect
 
 
 def create_admin():
     """
     Create a default administrator if one does not exist.
     """
+    inspector = inspect(db.engine)
+
+    if "users" not in inspector.get_table_names():
+        return
 
     email = os.getenv("ADMIN_EMAIL")
     password = os.getenv("ADMIN_PASSWORD")
