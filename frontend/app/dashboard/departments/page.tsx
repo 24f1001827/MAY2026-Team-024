@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { PlusSignIcon } from "@hugeicons/core-free-icons"
@@ -16,14 +15,11 @@ import {
   mockOfficers,
   mockUsers,
 } from "@/components/shared/mock-data"
-import { MOCK_SESSION_COOKIE } from "@/lib/auth/mock-session"
+import { getCurrentUser } from "@/lib/auth/current-user"
 import { publicRoutes, routes } from "@/nav"
 
 export default async function DepartmentsPage() {
-  const store = await cookies()
-  const user = mockUsers.find(
-    (u) => u.id === store.get(MOCK_SESSION_COOKIE)?.value
-  )
+  const user = await getCurrentUser()
 
   if (!user) redirect(publicRoutes.login)
   // Departments are managed by admins only.
