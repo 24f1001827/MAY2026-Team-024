@@ -5,3 +5,5 @@ from .admin_user_route import admin_user_bp
 from .officer_route import officer_bp
 from .agency_route import agency_bp
 from .notification_route import notification_bp
+from .department_route import department_bp
+from .admin_department_route import admin_department_bp
