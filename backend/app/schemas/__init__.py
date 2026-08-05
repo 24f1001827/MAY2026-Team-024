@@ -38,3 +38,9 @@ from .work_order_schema import (
     UpdateWorkOrderStatusSchema,
     MarkWorkOrderIncompleteSchema,
 )
+
+from .department_schema import (
+    CreateDepartmentSchema,
+    UpdateDepartmentSchema,
+    DepartmentResponseSchema,
+)
