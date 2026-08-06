@@ -39,12 +39,12 @@ class CreateDepartmentSchema(Schema):
 
     @post_load
     def strip_fields(self, data, **kwargs):
-        data["name"] = data["name"].strip()
+        name = data.get("name", "").strip()
+        data["name"] = name
 
-        if not data["name"]:
+        if not name:
             raise ValidationError(
-                "Department name cannot be empty.",
-                field_name="name",
+                {"name": ["Department name cannot be empty."]}
             )
 
         if data.get("description"):
@@ -80,15 +80,15 @@ class UpdateDepartmentSchema(Schema):
     @post_load
     def strip_fields(self, data, **kwargs):
         if "name" in data:
-            data["name"] = data["name"].strip()
+            name = data.get("name", "").strip()
+            data["name"] = name
 
-            if not data["name"]:
+            if not name:
                 raise ValidationError(
-                    "Department name cannot be empty.",
-                    field_name="name",
+                    {"name": ["Department name cannot be empty."]}
                 )
 
-        if "description" in data and data["description"]:
+        if data.get("description"):
             data["description"] = data["description"].strip()
 
         return data

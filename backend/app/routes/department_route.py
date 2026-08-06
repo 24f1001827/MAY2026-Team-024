@@ -8,8 +8,6 @@ from flask_jwt_extended import jwt_required
 from app.schemas import DepartmentResponseSchema
 from app.services import DepartmentService
 
-dpartment_bp = Blueprint("department", __name__, url_prefix="/api/v1/departments")
-
 departments_response_schema = DepartmentResponseSchema(
     many=True,
 )
