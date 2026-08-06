@@ -46,7 +46,6 @@ class DepartmentRepository:
             deleted_at=None,
         ).first()
 
-    from sqlalchemy import func
 
     @staticmethod
     def get_by_name(name):

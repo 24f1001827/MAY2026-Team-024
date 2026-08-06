@@ -1,4 +1,5 @@
 from app.repositories import DepartmentRepository
+from app.extensions import db
 
 
 class DepartmentService:
@@ -23,7 +24,7 @@ class DepartmentService:
 
         department = DepartmentRepository.create(data)
 
-        DepartmentRepository.update()
+        db.session.commit()
 
         return department
 
