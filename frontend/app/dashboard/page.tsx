@@ -1,8 +1,15 @@
+import { redirect } from "next/navigation"
+
 import { AdminDashboard } from "@/features/admin/components/admin-dashboard"
 import { getCurrentUser } from "@/lib/auth/current-user"
+import { routes } from "@/nav"
 
 export default async function DashboardPage() {
   const currentUser = await getCurrentUser()
+
+  // Citizens don't have a dashboard home — their workflow is the complaints
+  // map, so send them straight there.
+  if (currentUser?.role === "Citizen") redirect(routes.complaints.href)
 
   // NOTE: officers are intentionally NOT redirected to /dashboard/department
   // yet. That page still resolves the officer's department from mock data, so a
