@@ -4,7 +4,12 @@ from flask_jwt_extended import jwt_required,get_jwt_identity
 
 from app.models import UserRole
 from app.middleware import role_required
-from app.schemas import ComplaintSchema, ComplaintResponseSchema, ReopenComplaintSchema
+from app.schemas import (
+    ComplaintSchema,
+    ComplaintResponseSchema,
+    ComplaintDetailResponseSchema,
+    ReopenComplaintSchema,
+)
 from app.services import ComplaintService
 from app.utils import validate_images
 
@@ -58,7 +63,7 @@ def create_complaint():
                 {
                     "success": True,
                     "message": "Complaint created successfully.",
-                    "complaint_id": str(complaint.id),
+                    "data": ComplaintResponseSchema().dump(complaint),
                 }
             ),
             201,
@@ -213,7 +218,7 @@ def get_complaint(complaint_id):
                 {
                     "success": True,
                     "message": "Complaint retrieved successfully.",
-                    "data": ComplaintResponseSchema().dump(complaint),
+                    "data": ComplaintDetailResponseSchema().dump(complaint),
                 }
             ),
             200,
