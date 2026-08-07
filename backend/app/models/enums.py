@@ -37,7 +37,7 @@ class ComplaintStatus(Enum):
     AWAITING_BUDGET = "AwaitingBudget"
     BUDGET_ALLOCATED = "BudgetAllocated"
     TENDER_NOTIFICATION_ISSUED = "TenderNotificationIssued"
-    TENDER_ALLOTED = "TenderAlloted"
+    TENDER_ALLOTTED = "TenderAllotted"
     WORK_IN_PROGRESS = "WorkInProgress"
     WORK_COMPLETED = "WorkCompleted"
     RESOLVED = "Resolved"

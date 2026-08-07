@@ -32,7 +32,7 @@ def test_update_proposal_status_accepts_shortlisted_proposal(mock_officers,mock_
     p=proposal(ProposalStatus.SHORTLISTED); mock_officers.get_by_user_id.return_value=officer(); mock_proposals.get_by_id.return_value=p; mock_assignments.get_by_officer_and_complaint.return_value=MagicMock()
     with patch("app.services.officer_service.NotificationService.create_notification"):
         OfficerService.update_proposal_status("officer-1",1,{"status":ProposalStatus.ACCEPTED})
-    assert p.status == ProposalStatus.ACCEPTED and p.tender.status == TenderStatus.AWARDED and p.tender.complaint.status == ComplaintStatus.TENDER_ALLOTED
+    assert p.status == ProposalStatus.ACCEPTED and p.tender.status == TenderStatus.AWARDED and p.tender.complaint.status == ComplaintStatus.TENDER_ALLOTTED
     mock_proposals.reject_other_proposals.assert_called_once_with(2,1)
 
 @patch("app.services.officer_service.AgencyProposalRepository")

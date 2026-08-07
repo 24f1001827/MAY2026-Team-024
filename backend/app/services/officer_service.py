@@ -482,7 +482,7 @@ class OfficerService:
                 proposal.id,
             )
             proposal.agency.current_projects += 1
-            proposal.tender.complaint.status = ComplaintStatus.TENDER_ALLOTED
+            proposal.tender.complaint.status = ComplaintStatus.TENDER_ALLOTTED
             tender = proposal.tender
             tender.status = TenderStatus.AWARDED
 
