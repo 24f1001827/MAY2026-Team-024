@@ -55,6 +55,15 @@ class OfficerService:
         )
 
     @staticmethod
+    def get_officer_directory():
+        """
+        All active officers for the shared directory (name, department,
+        availability). Any authenticated user may read.
+        """
+
+        return OfficerRepository.get_all()
+
+    @staticmethod
     def get_my_department_dashboard(user_id):
         """
         Aggregate view for an officer's own department dashboard:
