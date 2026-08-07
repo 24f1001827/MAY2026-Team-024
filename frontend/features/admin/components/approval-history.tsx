@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/shadcn/table"
+import { Pagination } from "@/features/common/components/pagination"
 import { cn } from "@/lib/utils"
 import { getRoleMeta, getStatusMeta } from "@/lib/utils/user/display"
 import type { AdminUser } from "@/types/admin-user"
@@ -29,6 +30,8 @@ import { USER_STATUSES, type UserStatus } from "@/types/user"
 /** Only officers and agencies go through the approval workflow. */
 const APPROVAL_ROLES = ["Officer", "Agency"] as const
 type ApprovalRole = (typeof APPROVAL_ROLES)[number]
+
+const PAGE_SIZE = 8
 
 function StatusBadge({ status }: { status: UserStatus }) {
   const meta = getStatusMeta(status)
@@ -48,6 +51,15 @@ export function ApprovalHistory({ users }: { users: AdminUser[] }) {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<UserStatus | "all">("all")
   const [roleFilter, setRoleFilter] = useState<ApprovalRole | "all">("all")
+  const [page, setPage] = useState(1)
+
+  // Any filter change returns to the first page.
+  const resetPage =
+    <T,>(setter: (v: T) => void) =>
+    (v: T) => {
+      setter(v)
+      setPage(1)
+    }
 
   // Officer + agency registration requests. (React Compiler memoizes.)
   const requests = users.filter((u) =>
@@ -65,6 +77,13 @@ export function ApprovalHistory({ users }: { users: AdminUser[] }) {
       u.email.toLowerCase().includes(query)
     )
   })
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const rows = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  )
 
   return (
     <Card className="gap-0 overflow-hidden pb-0">
@@ -92,7 +111,7 @@ export function ApprovalHistory({ users }: { users: AdminUser[] }) {
           />
           <Input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => resetPage(setSearch)(e.target.value)}
             placeholder="Search name or email"
             className="h-9 w-full pl-8 sm:w-56"
           />
@@ -100,7 +119,9 @@ export function ApprovalHistory({ users }: { users: AdminUser[] }) {
         <div className="flex items-center gap-2">
           <Select
             value={roleFilter}
-            onValueChange={(v) => setRoleFilter(v as ApprovalRole | "all")}
+            onValueChange={resetPage(
+              (v: string) => setRoleFilter(v as ApprovalRole | "all"),
+            )}
           >
             <SelectTrigger className="h-9 w-32">
               <SelectValue placeholder="Role" />
@@ -116,7 +137,9 @@ export function ApprovalHistory({ users }: { users: AdminUser[] }) {
           </Select>
           <Select
             value={statusFilter}
-            onValueChange={(v) => setStatusFilter(v as UserStatus | "all")}
+            onValueChange={resetPage(
+              (v: string) => setStatusFilter(v as UserStatus | "all"),
+            )}
           >
             <SelectTrigger className="h-9 w-36">
               <SelectValue placeholder="Status" />
@@ -151,7 +174,7 @@ export function ApprovalHistory({ users }: { users: AdminUser[] }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((u) => (
+              {rows.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium text-foreground">
                     {u.name}
@@ -169,6 +192,16 @@ export function ApprovalHistory({ users }: { users: AdminUser[] }) {
           </Table>
         )}
       </CardContent>
+
+      {totalPages > 1 && (
+        <div className="flex justify-end border-t border-border p-3">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setPage}
+          />
+        </div>
+      )}
     </Card>
   )
 }
