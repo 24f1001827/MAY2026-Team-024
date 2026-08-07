@@ -72,9 +72,19 @@ class Complaint(BaseModel):
         nullable=False,
     )
 
+    district = db.Column(
+        db.String(100),
+        nullable=True,
+    )
+
     state = db.Column(
         db.String(100),
         nullable=False,
+    )
+
+    country = db.Column(
+        db.String(100),
+        nullable=True,
     )
 
     pincode = db.Column(
