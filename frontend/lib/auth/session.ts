@@ -58,7 +58,7 @@ export async function setSessionCookies(session: BackendSession): Promise<void> 
 export async function clearSessionCookies(): Promise<void> {
   const store = await cookies()
   for (const name of [ACCESS_COOKIE, REFRESH_COOKIE, USER_COOKIE]) {
-    store.delete(name)
+    store.delete({ name, path: "/" })
   }
 }
 
