@@ -1,6 +1,7 @@
 from datetime import datetime
 from app.models import (
     AssignmentStatus,
+    AssignedBy,
     IST,
     ComplaintStatus,
     ReviewDecision,
@@ -17,6 +18,7 @@ from app.repositories import (
     ComplaintAssignmentRepository,
     ReviewReportRepository,
     ComplaintRepository,
+    DepartmentRepository,
     TenderRepository,
     AgencyProposalRepository,
     WorkOrderRepository,
@@ -25,6 +27,8 @@ from app.repositories import (
 )
 
 from app.services.notification_service import NotificationService
+from app.services.settings_service import SettingsService
+from app.services.activity_service import ActivityService
 
 from app.extensions import db
 
@@ -49,6 +53,125 @@ class OfficerService:
         return ComplaintAssignmentRepository.get_by_officer_id(
             officer.user_id,
         )
+
+    @staticmethod
+    def get_my_department_dashboard(user_id):
+        """
+        Aggregate view for an officer's own department dashboard:
+        the department, its officers, and its complaints. Any officer in the
+        department may view it; the frontend restricts allotment to the head.
+        """
+
+        officer = OfficerRepository.get_by_user_id(user_id)
+
+        if officer is None:
+            raise ValueError("Officer not found.")
+
+        department = DepartmentRepository.get_by_id(officer.department_id)
+
+        if department is None:
+            raise ValueError("Department not found.")
+
+        officers = OfficerRepository.get_by_department_id(
+            officer.department_id
+        )
+
+        complaints = ComplaintRepository.get_by_department(
+            officer.department_id
+        )
+
+        return {
+            "department": department,
+            "officers": officers,
+            "complaints": complaints,
+            "is_department_head": officer.is_department_head,
+            "manual_allotment": SettingsService.is_manual_allotment(),
+        }
+
+    @staticmethod
+    def allot_complaint(user_id, complaint_id, data):
+        """
+        Allot (assign) a complaint to an officer in the department. Only the
+        department head may allot, and only within their own department.
+        """
+
+        head = OfficerRepository.get_by_user_id(user_id)
+
+        if head is None:
+            raise ValueError("Officer not found.")
+
+        if not head.is_department_head:
+            raise PermissionError(
+                "Only the department head can allot complaints."
+            )
+
+        complaint = ComplaintRepository.get_by_id(complaint_id)
+
+        if complaint is None:
+            raise ValueError("Complaint not found.")
+
+        if complaint.department_id != head.department_id:
+            raise PermissionError(
+                "You can only allot complaints in your own department."
+            )
+
+        officer = OfficerRepository.get_by_user_id(data["officer_id"])
+
+        if officer is None:
+            raise ValueError("Officer not found.")
+
+        if officer.department_id != complaint.department_id:
+            raise ValueError(
+                "Officer does not belong to the complaint department."
+            )
+
+        existing = ComplaintAssignmentRepository.get_by_complaint_id(
+            complaint_id
+        )
+
+        if existing:
+            raise ValueError("Complaint has already been assigned.")
+
+        assignment = ComplaintAssignmentRepository.create(
+            {
+                "complaint_id": complaint.id,
+                "officer_id": officer.user_id,
+                "assigned_by": AssignedBy.ADMIN,
+                "status": AssignmentStatus.PENDING,
+                "assignment_note": data.get("assignment_note"),
+            }
+        )
+
+        previous_status = complaint.status
+        complaint.status = ComplaintStatus.ASSIGNED
+        # The case is now on the assignee's plate — count it toward their
+        # workload immediately (released on reject / closure).
+        officer.current_workload += 1
+
+        ActivityService.record(
+            complaint.id,
+            f"Allotted to {officer.user.name} by the department head.",
+            user_id=head.user_id,
+            status_from=previous_status,
+            status_to=ComplaintStatus.ASSIGNED,
+        )
+
+        db.session.commit()
+
+        NotificationService.create_notification(
+            {
+                "user_id": officer.user_id,
+                "type": NotificationType.COMPLAINT_ASSIGNED,
+                "title": "Complaint Assigned",
+                "message": (
+                    f"You have been assigned complaint "
+                    f"'complaint ID: {complaint.id}, "
+                    f"Complaint title: {complaint.title}'."
+                ),
+            }
+        )
+
+        return assignment
 
     @staticmethod
     def get_complaint_details(user_id, complaint_id):
@@ -95,9 +218,19 @@ class OfficerService:
 
         assignment.status = AssignmentStatus.ACCEPTED
         assignment.accepted_at = datetime.now(IST)
-        officer.current_workload += 1
+        # Workload is counted at allotment (when the case lands on the officer),
+        # not on accept — so nothing to increment here.
 
+        previous_status = assignment.complaint.status
         assignment.complaint.status = ComplaintStatus.UNDER_REVIEW
+
+        ActivityService.record(
+            assignment.complaint.id,
+            f"{officer.user.name} accepted the assignment.",
+            user_id=officer.user_id,
+            status_from=previous_status,
+            status_to=ComplaintStatus.UNDER_REVIEW,
+        )
 
         ComplaintAssignmentRepository.update()
 
@@ -140,6 +273,15 @@ class OfficerService:
             raise ValueError("Only pending assignments can be rejected.")
 
         assignment.status = AssignmentStatus.REJECTED
+        # Rejecting releases the case, so it leaves the officer's workload
+        # (which was counted at allotment).
+        officer.current_workload = max(0, officer.current_workload - 1)
+
+        ActivityService.record(
+            assignment.complaint.id,
+            f"{officer.user.name} rejected the assignment.",
+            user_id=officer.user_id,
+        )
 
         ComplaintAssignmentRepository.update()
 
@@ -206,7 +348,16 @@ class OfficerService:
             }
         )
 
+        _prev = complaint.status
         complaint.status = ComplaintStatus.REPORT_SUBMITTED
+
+        ActivityService.record(
+            complaint.id,
+            "Review report submitted.",
+            user_id=user_id,
+            status_from=_prev,
+            status_to=ComplaintStatus.REPORT_SUBMITTED,
+        )
 
         db.session.commit()
         NotificationService.create_notification(
@@ -257,7 +408,16 @@ class OfficerService:
         if review_report.decision != ReviewDecision.TENDER_REQUIRED:
             raise ValueError("Budget request is allowed only when tender is required.")
 
+        _prev = complaint.status
         complaint.status = ComplaintStatus.AWAITING_BUDGET
+
+        ActivityService.record(
+            complaint.id,
+            "Budget requested for this complaint.",
+            user_id=user_id,
+            status_from=_prev,
+            status_to=ComplaintStatus.AWAITING_BUDGET,
+        )
 
         db.session.commit()
 
@@ -332,7 +492,16 @@ class OfficerService:
             }
         )
 
+        _prev = complaint.status
         complaint.status = ComplaintStatus.TENDER_NOTIFICATION_ISSUED
+
+        ActivityService.record(
+            complaint.id,
+            "Tender created for this complaint.",
+            user_id=user_id,
+            status_from=_prev,
+            status_to=ComplaintStatus.TENDER_NOTIFICATION_ISSUED,
+        )
 
         db.session.commit()
         agencies = AgencyRepository.get_all()
@@ -482,7 +651,17 @@ class OfficerService:
                 proposal.id,
             )
             proposal.agency.current_projects += 1
-            proposal.tender.complaint.status = ComplaintStatus.TENDER_ALLOTTED
+            _complaint = proposal.tender.complaint
+            _prev = _complaint.status
+            _complaint.status = ComplaintStatus.TENDER_ALLOTTED
+
+            ActivityService.record(
+                _complaint.id,
+                "Tender allotted to an agency.",
+                user_id=user_id,
+                status_from=_prev,
+                status_to=ComplaintStatus.TENDER_ALLOTTED,
+            )
             tender = proposal.tender
             tender.status = TenderStatus.AWARDED
 
@@ -628,7 +807,17 @@ class OfficerService:
         work_order.verified_by = officer.user_id
         work_order.verified_at = datetime.now(IST)
 
-        work_order.tender.complaint.status = ComplaintStatus.RESOLVED
+        _complaint = work_order.tender.complaint
+        _prev = _complaint.status
+        _complaint.status = ComplaintStatus.RESOLVED
+
+        ActivityService.record(
+            _complaint.id,
+            "Work verified — complaint resolved.",
+            user_id=user_id,
+            status_from=_prev,
+            status_to=ComplaintStatus.RESOLVED,
+        )
 
         db.session.commit()
 
@@ -714,7 +903,16 @@ class OfficerService:
 
         work_order.status = WorkOrderStatus.INCOMPLETE
 
+        _prev = complaint.status
         complaint.status = ComplaintStatus.WORK_IN_PROGRESS
+
+        ActivityService.record(
+            complaint.id,
+            "Work marked in progress.",
+            user_id=user_id,
+            status_from=_prev,
+            status_to=ComplaintStatus.WORK_IN_PROGRESS,
+        )
 
         NotificationService.create_notification(
             {
