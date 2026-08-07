@@ -7,4 +7,5 @@ export const departmentKeys = {
   lists: () => [...departmentKeys.all, "list"] as const,
   list: () => [...departmentKeys.lists()] as const,
   detail: (id: number) => [...departmentKeys.all, "detail", id] as const,
+  dashboard: (id: number) => [...departmentKeys.all, "dashboard", id] as const,
 }

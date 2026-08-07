@@ -37,3 +37,24 @@ export function useDeleteDepartment() {
     onSuccess: () => qc.invalidateQueries({ queryKey: departmentKeys.all }),
   })
 }
+
+/** Admin: allot a complaint to an officer, then refresh the dashboard. */
+export function useAdminAllotComplaint(departmentId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      complaintId,
+      officerId,
+      assignmentNote,
+    }: {
+      complaintId: string
+      officerId: string
+      assignmentNote?: string
+    }) =>
+      departmentService.allotComplaint(complaintId, officerId, assignmentNote),
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: departmentKeys.dashboard(departmentId),
+      }),
+  })
+}

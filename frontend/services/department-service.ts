@@ -18,9 +18,14 @@ import {
   normalizeDepartment,
   type RawDepartment,
 } from "@/lib/utils/department/normalize"
+import {
+  normalizeDepartmentDashboard,
+  type RawDepartmentDashboard,
+} from "@/lib/utils/department/dashboard-normalize"
 import type {
   CreateDepartmentRequest,
   Department,
+  DepartmentDashboardData,
   DepartmentOption,
   UpdateDepartmentRequest,
 } from "@/types/department"
@@ -74,5 +79,25 @@ export const departmentService = {
   /** Admin: soft-delete a department. */
   async remove(id: number): Promise<void> {
     await api.delete(`/admin/departments/${id}`)
+  },
+
+  /** Admin: a department's dashboard (department + officers + complaints). */
+  async getDashboard(id: number): Promise<DepartmentDashboardData> {
+    const res = await api.get<Envelope<RawDepartmentDashboard>>(
+      `/admin/departments/${id}/dashboard`,
+    )
+    return normalizeDepartmentDashboard(res.data)
+  },
+
+  /** Admin: allot a complaint to an officer. */
+  async allotComplaint(
+    complaintId: string,
+    officerId: string,
+    assignmentNote?: string,
+  ): Promise<void> {
+    await api.post(`/admin/complaints/${complaintId}/assign`, {
+      officer_id: officerId,
+      ...(assignmentNote ? { assignment_note: assignmentNote } : {}),
+    })
   },
 }
