@@ -7,6 +7,7 @@ from app.models import UserRole, UserStatus
 from app.schemas import (
     UserResponseSchema,
     UpdateUserStatusSchema,
+    UpdateMaxWorkloadSchema,
 )
 from app.services import AdminUserService
 from app.tasks.email_task import send_agency_approve_email,send_officer_approve_email
@@ -19,6 +20,7 @@ admin_user_bp = Blueprint(
 
 user_response_schema = UserResponseSchema(many=True)
 update_status_schema = UpdateUserStatusSchema()
+update_max_workload_schema = UpdateMaxWorkloadSchema()
 
 @admin_user_bp.get("")
 @jwt_required()
@@ -173,7 +175,63 @@ def update_user_status(user_id):
                     "success": False,
                     "message": "Internal server error.",
                     "error":str(err)
-                
+
+                }
+            ),
+            500,
+        )
+
+
+@admin_user_bp.patch("/<uuid:user_id>/max-workload")
+@jwt_required()
+@role_required(UserRole.ADMIN)
+def update_officer_max_workload(user_id):
+    """
+    Set an officer's maximum workload (capacity).
+    """
+
+    try:
+
+        data = update_max_workload_schema.load(request.get_json())
+
+        user = AdminUserService.update_officer_max_workload(user_id, data)
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Officer max workload updated successfully.",
+                    "data": UserResponseSchema().dump(user),
+                }
+            ),
+            200,
+        )
+
+    except ValidationError as e:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Validation failed.",
+                    "errors": e.messages,
+                }
+            ),
+            422,
+        )
+
+    except ValueError as e:
+        return (
+            jsonify({"success": False, "message": str(e)}),
+            404,
+        )
+
+    except Exception as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
                 }
             ),
             500,
