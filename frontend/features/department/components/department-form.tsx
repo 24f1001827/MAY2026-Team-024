@@ -16,9 +16,9 @@ import {
 } from "@/hooks/department"
 import { useUsers } from "@/hooks/admin-users"
 import type {
-  CreateDepartmentInput,
+  CreateDepartmentRequest,
   Department,
-  UpdateDepartmentInput,
+  UpdateDepartmentRequest,
 } from "@/types/department"
 
 /** Shared `id` linking the header's submit button to this form. */
@@ -100,7 +100,7 @@ export function DepartmentForm({
       budget = parsed
     }
 
-    const base: CreateDepartmentInput = {
+    const base: CreateDepartmentRequest = {
       name,
       description: description || undefined,
       budget,
@@ -118,7 +118,7 @@ export function DepartmentForm({
     }
 
     if (isEdit && department) {
-      const input: UpdateDepartmentInput = base
+      const input: UpdateDepartmentRequest = base
       updateDepartment.mutate(
         { id: department.id, input },
         {
