@@ -1,11 +1,31 @@
 from app.repositories import DepartmentRepository
 from app.extensions import db
+from app.models import Officer
 
 
 class DepartmentService:
     """
     Service for department operations.
     """
+
+    @staticmethod
+    def _validate_head_officer(head_officer_id):
+        """
+        Ensure a head officer id (if provided) belongs to an actual officer.
+        """
+
+        if head_officer_id is None:
+            return
+
+        officer = Officer.query.filter_by(
+            user_id=head_officer_id,
+            deleted_at=None,
+        ).first()
+
+        if officer is None:
+            raise ValueError(
+                "Selected head officer must be an existing officer."
+            )
 
     @staticmethod
     def create_department(data):
@@ -21,6 +41,10 @@ class DepartmentService:
             raise ValueError(
                 "Department with this name already exists."
             )
+
+        DepartmentService._validate_head_officer(
+            data.get("head_officer_id")
+        )
 
         department = DepartmentRepository.create(data)
 
@@ -85,6 +109,11 @@ class DepartmentService:
                 raise ValueError(
                     "Department with this name already exists."
                 )
+
+        if "head_officer_id" in data:
+            DepartmentService._validate_head_officer(
+                data["head_officer_id"]
+            )
 
         for key, value in data.items():
             setattr(
