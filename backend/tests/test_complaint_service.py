@@ -1,6 +1,7 @@
 import uuid
 from unittest.mock import MagicMock, patch
 import pytest
+from marshmallow import ValidationError
 from app.models import ComplaintPriority, ComplaintStatus, UserRole
 from app.services.complaint_service import ComplaintService
 
@@ -165,7 +166,7 @@ def test_create_complaint_department_not_found(
     mock_user_repo.get_by_id.return_value = make_user()
     mock_department_repo.get_by_name.return_value = None
 
-    with pytest.raises(ValueError, match="Department not found"):
+    with pytest.raises(ValidationError, match="Department not found"):
         ComplaintService.create_complaint(complaint_data(), [])
 
     mock_db.rollback.assert_called_once()
@@ -375,7 +376,9 @@ def test_update_complaint_invalid_cases(
     mock_complaint_repo.get_by_id.return_value = complaint
     mock_department_repo.get_by_name.return_value = department
 
-    with pytest.raises((ValueError, PermissionError), match=message):
+    with pytest.raises(
+        (ValueError, PermissionError, ValidationError), match=message
+    ):
         ComplaintService.update_complaint(
             uuid.uuid4(),
             complaint_data(),
