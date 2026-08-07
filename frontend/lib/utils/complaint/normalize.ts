@@ -110,7 +110,7 @@ export function normalizeComplaintRemark(
     complaintId: raw.complaint_id,
     authorId: raw.author_id,
     authorName: raw.author_name ?? "Unknown",
-    authorRole: normalizeRole(raw.author_role ?? ""),
+    authorRole: raw.author_role ? normalizeRole(raw.author_role) : null,
     message: raw.message,
     statusFrom: (raw.status_from as ComplaintStatus | null) ?? null,
     statusTo: (raw.status_to as ComplaintStatus | null) ?? null,

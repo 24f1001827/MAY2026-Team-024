@@ -11,7 +11,8 @@ export interface ComplaintRemark {
   complaintId: string
   authorId: string
   authorName: string
-  authorRole: UserRole
+  /** Null for system-generated entries (auto-assignment, auto transitions). */
+  authorRole: UserRole | null
   message: string
   /** Set together when the remark accompanied a status change. */
   statusFrom: ComplaintStatus | null
