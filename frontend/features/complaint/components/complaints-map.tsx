@@ -48,6 +48,44 @@ function MapPanner({ target }: { target: Coords | null }) {
   return null
 }
 
+/**
+ * Fits the viewport to all complaint markers so they're actually visible
+ * (otherwise the map stays on its default center and off-screen pins look
+ * "missing"). Re-fits only when the set of coordinates changes — not on every
+ * render or on selection — so it doesn't fight the user's panning.
+ */
+function FitBounds({ points }: { points: Coords[] }) {
+  const map = useMap()
+  // Stable signature of the marker positions; drives the effect.
+  const key = points.map((p) => `${p.lat},${p.lng}`).join("|")
+
+  useEffect(() => {
+    if (!map || points.length === 0) return
+
+    if (points.length === 1) {
+      map.setCenter(points[0])
+      map.setZoom(15)
+      return
+    }
+
+    const lats = points.map((p) => p.lat)
+    const lngs = points.map((p) => p.lng)
+    map.fitBounds(
+      {
+        north: Math.max(...lats),
+        south: Math.min(...lats),
+        east: Math.max(...lngs),
+        west: Math.min(...lngs),
+      },
+      64, // px padding so pins aren't flush against the edges
+    )
+    // `key` captures the positions; `points` identity isn't a stable dep.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, key])
+
+  return null
+}
+
 type ComplaintsMapProps = {
   complaints: ComplaintMapItem[]
   selectedId: string | null
@@ -70,6 +108,11 @@ export function ComplaintsMap({
   const selected = complaints.find((c) => c.id === selectedId) ?? null
   const target = selected ? coordsOf(selected) : null
 
+  // Valid marker positions, used to fit the viewport on load / when they change.
+  const points = complaints
+    .map(coordsOf)
+    .filter((c): c is Coords => c !== null)
+
   return (
     <APIProvider apiKey={API_KEY}>
       <Map
@@ -84,6 +127,7 @@ export function ComplaintsMap({
         className="size-full"
         onClick={() => onSelect(null)}
       >
+        <FitBounds points={points} />
         {complaints.map((complaint) => {
           const coords = coordsOf(complaint)
           if (!coords) return null
