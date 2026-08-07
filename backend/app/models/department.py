@@ -26,9 +26,25 @@ class Department(BaseModel):
         default=0
     )
 
+    # The officer who heads this department. Nullable — a department may have no
+    # head assigned. FK to users.id (an officer is identified by their user id).
+    head_officer_id=db.Column(
+        db.UUID(as_uuid=True),
+        db.ForeignKey("users.id"),
+        nullable=True,
+    )
+
     # -------------------------
     # Relationships
     # -------------------------
+
+    # Direct link to the head officer's user record, for displaying their name.
+    # `foreign_keys` disambiguates from the officers relationship below.
+    head_officer = db.relationship(
+        "User",
+        foreign_keys=[head_officer_id],
+        lazy="joined",
+    )
 
     officers = db.relationship(
         "Officer",

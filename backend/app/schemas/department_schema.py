@@ -37,6 +37,11 @@ class CreateDepartmentSchema(Schema):
         as_string=True,
     )
 
+    head_officer_id = fields.UUID(
+        required=False,
+        allow_none=True,
+    )
+
     @post_load
     def strip_fields(self, data, **kwargs):
         name = data.get("name", "").strip()
@@ -77,6 +82,10 @@ class UpdateDepartmentSchema(Schema):
         as_string=True,
     )
 
+    head_officer_id = fields.UUID(
+        allow_none=True,
+    )
+
     @post_load
     def strip_fields(self, data, **kwargs):
         if "name" in data:
@@ -92,6 +101,20 @@ class UpdateDepartmentSchema(Schema):
             data["description"] = data["description"].strip()
 
         return data
+
+
+class PublicDepartmentSchema(Schema):
+    """
+    Minimal, safe-to-expose department fields for unauthenticated consumers
+    (e.g. the officer registration dropdown). Only id and name — no budget,
+    description, or timestamps.
+    """
+
+    id = fields.Integer(
+        dump_only=True,
+    )
+
+    name = fields.String()
 
 
 class DepartmentResponseSchema(Schema):
@@ -112,6 +135,19 @@ class DepartmentResponseSchema(Schema):
     budget = fields.Decimal(
         places=2,
         as_string=True,
+    )
+
+    head_officer_id = fields.UUID(
+        allow_none=True,
+        dump_only=True,
+    )
+
+    # The head officer's display name, resolved via the `head_officer`
+    # relationship. Null when no head is assigned.
+    head_officer_name = fields.String(
+        attribute="head_officer.name",
+        allow_none=True,
+        dump_only=True,
     )
 
     created_at = fields.DateTime(
