@@ -9,6 +9,10 @@ import { backendFetch } from "@/lib/api/backend"
  *
  * Proxied to Flask `/complaints/{id}` with the caller's Bearer token. The
  * backend enforces ownership (citizen) / visibility.
+ *
+ * On PUT, parsing to `FormData` and re-sending the object is deliberate — see
+ * the note in `app/api/complaints/route.ts` before changing how the multipart
+ * body is forwarded.
  */
 export async function GET(
   _request: Request,

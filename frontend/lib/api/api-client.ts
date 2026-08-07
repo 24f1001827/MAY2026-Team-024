@@ -95,7 +95,15 @@ class ApiClient {
     this.baseURL = baseURL
   }
 
-  /** Set/update a default header sent with every request. */
+  /**
+   * Set/update a default header sent with every JSON request. Mutates shared
+   * state on the `apiClient` singleton, so it affects all subsequent calls.
+   *
+   * Does NOT reach the multipart methods (`postMultipart`/`postFormData`/
+   * `putFormData`) — they deliberately omit `headers` so fetch can set the
+   * multipart boundary. Never set "Content-Type" here expecting uploads to
+   * pick it up, and never make those methods spread `this.headers`.
+   */
   setDefaultHeader(key: string, value: string): void {
     ;(this.headers as Record<string, string>)[key] = value
   }
