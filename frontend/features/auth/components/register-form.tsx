@@ -104,7 +104,7 @@ function DepartmentSelect() {
         name="department"
         required
         defaultValue=""
-        disabled={isPending || isError}
+        aria-busy={isPending}
       >
         <option value="" disabled>
           {isPending
