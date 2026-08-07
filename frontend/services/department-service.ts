@@ -19,10 +19,10 @@ import {
   type RawDepartment,
 } from "@/lib/utils/department/normalize"
 import type {
-  CreateDepartmentInput,
+  CreateDepartmentRequest,
   Department,
   DepartmentOption,
-  UpdateDepartmentInput,
+  UpdateDepartmentRequest,
 } from "@/types/department"
 
 /** Backend success envelope: `{ success, message, data }`. */
@@ -54,7 +54,7 @@ export const departmentService = {
   },
 
   /** Admin: create a department. */
-  async create(input: CreateDepartmentInput): Promise<Department> {
+  async create(input: CreateDepartmentRequest): Promise<Department> {
     const res = await api.post<Envelope<RawDepartment>>(
       "/admin/departments",
       input,
@@ -63,7 +63,7 @@ export const departmentService = {
   },
 
   /** Admin: update a department (partial). */
-  async update(id: number, input: UpdateDepartmentInput): Promise<Department> {
+  async update(id: number, input: UpdateDepartmentRequest): Promise<Department> {
     const res = await api.patch<Envelope<RawDepartment>>(
       `/admin/departments/${id}`,
       input,

@@ -4,8 +4,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 import { departmentService } from "@/services/department-service"
 import type {
-  CreateDepartmentInput,
-  UpdateDepartmentInput,
+  CreateDepartmentRequest,
+  UpdateDepartmentRequest,
 } from "@/types/department"
 import { departmentKeys } from "./keys"
 
@@ -13,7 +13,7 @@ import { departmentKeys } from "./keys"
 export function useCreateDepartment() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: CreateDepartmentInput) =>
+    mutationFn: (input: CreateDepartmentRequest) =>
       departmentService.create(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: departmentKeys.all }),
   })
@@ -23,7 +23,7 @@ export function useCreateDepartment() {
 export function useUpdateDepartment() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, input }: { id: number; input: UpdateDepartmentInput }) =>
+    mutationFn: ({ id, input }: { id: number; input: UpdateDepartmentRequest }) =>
       departmentService.update(id, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: departmentKeys.all }),
   })
