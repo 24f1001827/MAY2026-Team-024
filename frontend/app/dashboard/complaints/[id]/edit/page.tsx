@@ -1,13 +1,10 @@
 import Link from "next/link"
-import { notFound, redirect } from "next/navigation"
+import { redirect } from "next/navigation"
 
 import { Button } from "@/components/shadcn/button"
 import { PageHeader } from "@/features/common/components/page-header"
-import {
-  ComplaintForm,
-  COMPLAINT_FORM_ID,
-} from "@/features/complaint/components/complaint-form"
-import { mockComplaints } from "@/components/shared/mock-data"
+import { COMPLAINT_FORM_ID } from "@/features/complaint/components/complaint-form"
+import { ComplaintEditForm } from "@/features/complaint/components/complaint-edit-form"
 import { getCurrentUser } from "@/lib/auth/current-user"
 import { publicRoutes, routes } from "@/nav"
 
@@ -25,9 +22,6 @@ export default async function EditComplaintPage({
     redirect(routes.complaints.detail(id).href)
   }
 
-  const complaint = mockComplaints.find((c) => c.id === id)
-  if (!complaint) notFound()
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -37,9 +31,7 @@ export default async function EditComplaintPage({
         actions={
           <>
             <Button asChild variant="outline">
-              <Link href={routes.complaints.detail(complaint.id).href}>
-                Cancel
-              </Link>
+              <Link href={routes.complaints.detail(id).href}>Cancel</Link>
             </Button>
             <Button type="submit" form={COMPLAINT_FORM_ID} variant="brand">
               Save changes
@@ -47,7 +39,7 @@ export default async function EditComplaintPage({
           </>
         }
       />
-      <ComplaintForm mode="edit" complaint={complaint} />
+      <ComplaintEditForm id={id} />
     </div>
   )
 }
