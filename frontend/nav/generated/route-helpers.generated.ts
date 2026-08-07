@@ -5,7 +5,7 @@
  * Run `bun routes:generate` to regenerate from the filesystem.
  *
  * Source: app/dashboard (scanned recursively)
- * Generated: 2026-07-23
+ * Generated: 2026-08-02
  */
 
 const BASE = '/dashboard';
@@ -22,6 +22,8 @@ export const routes = {
       edit: b(`/agencies/${id}/edit`),
     }),
   },
+
+  blocked: b('/blocked'),
 
   complaints: {
     href: b('/complaints'),
@@ -53,6 +55,10 @@ export const routes = {
       edit: b(`/officers/${id}/edit`),
     }),
   },
+
+  pendingApprovals: b('/pending-approvals'),
+
+  rejected: b('/rejected'),
 
   settings: b('/settings'),
 
