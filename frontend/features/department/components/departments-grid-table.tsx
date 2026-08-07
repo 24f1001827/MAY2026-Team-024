@@ -4,11 +4,9 @@ import { useMemo, useState } from "react"
 import Link from "next/link"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  Megaphone01Icon,
   OfficeIcon,
   PlusSignIcon,
   Search01Icon,
-  UserGroupIcon,
   UserStar01Icon,
   Wallet01Icon,
 } from "@hugeicons/core-free-icons"
@@ -40,14 +38,12 @@ import { Pagination } from "@/features/common/components/pagination"
 import { formatCurrency } from "@/lib/utils/common/format"
 import { routes } from "@/nav"
 
-/** A department row enriched with the counts shown on its card. */
+/** A department row as shown on its card. */
 export type DepartmentCard = {
   id: number
   name: string
   description: string
   budget: number
-  officerCount: number
-  complaintCount: number
   headOfficerName: string | null
 }
 
@@ -193,17 +189,6 @@ export function DepartmentsGridTable({
                       <span className="text-muted-foreground">Head:</span>
                       <span className="truncate font-medium text-foreground">
                         {department.headOfficerName ?? "Not Assigned"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1.5">
-                        <HugeiconsIcon icon={UserGroupIcon} size={14} />
-                        {department.officerCount} officers
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <HugeiconsIcon icon={Megaphone01Icon} size={14} />
-                        {department.complaintCount} complaints
                       </span>
                     </div>
                   </CardContent>
