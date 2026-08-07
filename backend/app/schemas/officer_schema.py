@@ -295,6 +295,25 @@ class UpdateProposalStatusSchema(Schema):
     )
 
 
+class OfficerDirectorySchema(Schema):
+    """
+    Privacy-safe officer directory entry for any authenticated user (citizens
+    included): name, department, availability only — no contact info or
+    workload.
+    """
+
+    user_id = fields.UUID()
+
+    name = fields.String(attribute="user.name")
+
+    department = fields.String(attribute="department.name")
+
+    availability_status = EnumField(
+        AvailabilityStatus,
+        by_value=True,
+    )
+
+
 class DepartmentOfficerSchema(Schema):
     """
     An officer within a department, flattened with their user's display fields
