@@ -7,12 +7,19 @@ import { Input } from "@/components/shadcn/input"
 import { Textarea } from "@/components/shadcn/textarea"
 import { NativeSelect } from "@/components/shadcn/native-select"
 import { Label } from "@/components/shadcn/label"
+import { ApiError } from "@/lib/api/api-client"
 import { toast } from "@/lib/styles/toast-styles"
 import { routes } from "@/nav"
-import type { Department } from "@/types/department"
-
-/** An officer eligible to head this department. */
-export type DepartmentHeadOption = { userId: string; name: string }
+import {
+  useCreateDepartment,
+  useUpdateDepartment,
+} from "@/hooks/department"
+import { useUsers } from "@/hooks/admin-users"
+import type {
+  CreateDepartmentInput,
+  Department,
+  UpdateDepartmentInput,
+} from "@/types/department"
 
 /** Shared `id` linking the header's submit button to this form. */
 export const DEPARTMENT_FORM_ID = "department-form"
@@ -35,36 +42,84 @@ function Field({
 }
 
 /**
- * Create/edit form for a department. Admin-only (enforced by the page).
- * Mock-only — submits toast + redirect until the backend lands. Title and the
- * Cancel/submit actions live in the page's PageHeader.
+ * Create/edit form for a department (admin-only, enforced by the page). Submits
+ * through the departments API. The head-officer options come from the active
+ * officers list (`/admin/users?role=Officer&status=Active`); the backend
+ * validates that the chosen head is a real officer.
  */
 export function DepartmentForm({
   mode,
   department,
-  officers = [],
 }: {
   mode: "create" | "edit"
   department?: Department
-  /** Officers in this department, eligible to be its head. */
-  officers?: DepartmentHeadOption[]
 }) {
   const router = useRouter()
   const isEdit = mode === "edit"
 
+  const createDepartment = useCreateDepartment()
+  const updateDepartment = useUpdateDepartment()
+  const pending = createDepartment.isPending || updateDepartment.isPending
+
+  // Active officers are the eligible department heads.
+  const { data: officers, isPending: officersLoading } = useUsers({
+    role: "Officer",
+    status: "Active",
+  })
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    // TODO: wire to the departments API.
+    if (pending) return
+
+    const data = new FormData(event.currentTarget)
+    const name = String(data.get("name") ?? "").trim()
+    const description = String(data.get("description") ?? "").trim()
+    const budgetRaw = String(data.get("budget") ?? "").trim()
+    const headOfficerId = String(data.get("headOfficerId") ?? "")
+
+    const base: CreateDepartmentInput = {
+      name,
+      description: description || undefined,
+      budget: budgetRaw ? Number(budgetRaw) : undefined,
+      // Empty string → null clears/omits the head.
+      head_officer_id: headOfficerId || null,
+    }
+
+    const onError = (error: unknown) => {
+      toast.error(isEdit ? "Couldn’t save changes" : "Couldn’t create department", {
+        description:
+          error instanceof ApiError || error instanceof Error
+            ? error.message
+            : "Please try again.",
+      })
+    }
+
     if (isEdit && department) {
-      toast.success("Department updated", {
-        description: "Your changes have been saved.",
-      })
-      router.push(routes.departments.detail(department.id).href)
+      const input: UpdateDepartmentInput = base
+      updateDepartment.mutate(
+        { id: department.id, input },
+        {
+          onSuccess: (updated) => {
+            toast.success("Department updated", {
+              description: "Your changes have been saved.",
+            })
+            router.push(routes.departments.detail(updated.id).href)
+            router.refresh()
+          },
+          onError,
+        },
+      )
     } else {
-      toast.success("Department created", {
-        description: "The new department has been added.",
+      createDepartment.mutate(base, {
+        onSuccess: () => {
+          toast.success("Department created", {
+            description: "The new department has been added.",
+          })
+          router.push(routes.departments.href)
+          router.refresh()
+        },
+        onError,
       })
-      router.push(routes.departments.href)
     }
   }
 
@@ -86,7 +141,6 @@ export function DepartmentForm({
             <Textarea
               id="description"
               name="description"
-              required
               rows={3}
               defaultValue={department?.description}
               placeholder="What this department is responsible for"
@@ -99,7 +153,6 @@ export function DepartmentForm({
               name="budget"
               type="number"
               min={0}
-              required
               defaultValue={department?.budget}
               placeholder="25000000"
             />
@@ -110,18 +163,18 @@ export function DepartmentForm({
               id="headOfficerId"
               name="headOfficerId"
               defaultValue={department?.headOfficerId ?? ""}
-              disabled={officers.length === 0}
+              disabled={officersLoading || (officers?.length ?? 0) === 0}
             >
               <option value="">No Head Assigned</option>
-              {officers.map((o) => (
-                <option key={o.userId} value={o.userId}>
+              {officers?.map((o) => (
+                <option key={o.id} value={o.id}>
                   {o.name}
                 </option>
               ))}
             </NativeSelect>
-            {officers.length === 0 && (
+            {!officersLoading && (officers?.length ?? 0) === 0 && (
               <p className="text-xs text-muted-foreground">
-                Add officers to this department first to assign a head.
+                No active officers yet — approve an officer to assign a head.
               </p>
             )}
           </Field>
