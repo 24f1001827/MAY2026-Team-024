@@ -176,6 +176,12 @@ class AuthService:
         access_token = generate_access_token(user)
         refresh_token = generate_refresh_token(user)
 
+        # Officers carry their head-of-department flag so the frontend can land
+        # a department head on their dashboard (allotment view) after login.
+        is_department_head = bool(
+            user.officer.is_department_head
+        ) if user.officer else False
+
         return {
             "user": {
                 "id": str(user.id),
@@ -183,6 +189,7 @@ class AuthService:
                 "email": user.email,
                 "role": user.role.value,
                 "status": user.status.value,
+                "is_department_head": is_department_head,
             },
             "access_token": access_token,
             "refresh_token": refresh_token,
