@@ -23,3 +23,16 @@ export function useUpdateUserStatus() {
     },
   })
 }
+
+/** Set an officer's maximum workload (capacity). */
+export function useUpdateMaxWorkload() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, maxWorkload }: { id: string; maxWorkload: number }) =>
+      adminUserService.updateMaxWorkload(id, maxWorkload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminUserKeys.all })
+    },
+  })
+}

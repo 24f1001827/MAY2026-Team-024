@@ -42,4 +42,13 @@ export const adminUserService = {
     )
     return normalizeAdminUser(res.data)
   },
+
+  /** Set an officer's maximum workload (capacity). */
+  async updateMaxWorkload(id: string, maxWorkload: number): Promise<AdminUser> {
+    const res = await api.patch<Envelope<RawAdminUser>>(
+      `/admin/users/${id}/max-workload`,
+      { max_workload: maxWorkload },
+    )
+    return normalizeAdminUser(res.data)
+  },
 }

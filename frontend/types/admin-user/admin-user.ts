@@ -12,6 +12,9 @@ export interface AdminUser {
   phone: string
   role: UserRole
   status: UserStatus
+  /** Officer capacity/load — null for non-officers. */
+  currentWorkload: number | null
+  maxWorkload: number | null
 }
 
 /** Optional filters for the admin user list (mirrors the backend query params). */
