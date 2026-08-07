@@ -8,6 +8,7 @@ from app.schemas import (
     CreateDepartmentSchema,
     UpdateDepartmentSchema,
     DepartmentResponseSchema,
+    DepartmentDashboardResponseSchema,
 )
 from app.services import DepartmentService
 
@@ -23,6 +24,7 @@ update_department_schema = UpdateDepartmentSchema()
 
 department_response_schema = DepartmentResponseSchema()
 departments_response_schema = DepartmentResponseSchema(many=True)
+department_dashboard_schema = DepartmentDashboardResponseSchema()
 
 @admin_department_bp.post("")
 @jwt_required()
@@ -133,6 +135,51 @@ def get_departments():
             ),
             500,
         )
+
+@admin_department_bp.get("/<int:department_id>/dashboard")
+@jwt_required()
+@role_required(UserRole.ADMIN)
+def get_department_dashboard(department_id):
+    """
+    Aggregate dashboard for a department (admin): department + officers +
+    complaints. Same shape as the officer dashboard.
+    """
+
+    try:
+
+        dashboard = DepartmentService.get_department_dashboard(
+            department_id
+        )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Department dashboard retrieved successfully.",
+                    "data": department_dashboard_schema.dump(dashboard),
+                }
+            ),
+            200,
+        )
+
+    except ValueError as e:
+        return (
+            jsonify({"success": False, "message": str(e)}),
+            404,
+        )
+
+    except Exception as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
 
 @admin_department_bp.get("/<int:department_id>")
 @jwt_required()
