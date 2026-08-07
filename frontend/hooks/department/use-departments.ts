@@ -34,3 +34,12 @@ export function useDepartment(id: number) {
     enabled: Number.isFinite(id),
   })
 }
+
+/** Admin: a department's dashboard (department + officers + complaints). */
+export function useDepartmentDashboard(id: number) {
+  return useQuery({
+    queryKey: departmentKeys.dashboard(id),
+    queryFn: () => departmentService.getDashboard(id),
+    enabled: Number.isFinite(id),
+  })
+}
