@@ -3,7 +3,11 @@ from flask_jwt_extended import jwt_required
 
 from app.middleware import role_required
 from app.models import UserRole
-from app.schemas import ComplaintResponseSchema,AssignComplaintSchema
+from app.schemas import (
+    ComplaintResponseSchema,
+    ComplaintDetailResponseSchema,
+    AssignComplaintSchema,
+)
 from app.services import AdminComplaintService,AdminBudgetService
 from marshmallow import ValidationError
 
@@ -121,7 +125,7 @@ def get_complaint(complaint_id):
                 {
                     "success": True,
                     "message": "Complaint retrieved successfully.",
-                    "data": ComplaintResponseSchema().dump(
+                    "data": ComplaintDetailResponseSchema().dump(
                         complaint
                     ),
                 }
