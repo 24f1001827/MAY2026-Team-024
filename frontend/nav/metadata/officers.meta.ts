@@ -8,15 +8,17 @@
 import { ShieldUserIcon } from "@hugeicons/core-free-icons"
 
 import type { MetadataRegistry } from "../types"
-import { ADMIN_ONLY } from "../access/roles"
+import { ADMIN_ONLY, OPEN_ACCESS } from "../access/roles"
 
 export const officersMetadata: MetadataRegistry = {
   officers: {
     label: "Officers",
     icon: ShieldUserIcon,
-    description: "Manage officers and their department assignments.",
+    // Read-only officer directory — visible to any authenticated user. The
+    // create/detail/edit routes below stay admin-only.
+    description: "Officers across departments and their availability.",
     order: 50,
-    access: ADMIN_ONLY,
+    access: OPEN_ACCESS,
   },
   "officers-create": {
     label: "New officer",
