@@ -152,6 +152,12 @@ export const publicRoutes = {
   registerOfficer: "/register/officer",
   registerAgency: "/register/agency",
   forgotPassword: "/forgot-password",
+  /** Post-login status pages for non-active accounts (can't sign in). */
+  accountStatus: {
+    pending: "/account/pending",
+    rejected: "/account/rejected",
+    blocked: "/account/blocked",
+  },
   about: "/about",
   support: "/support",
   contact: "/contact",

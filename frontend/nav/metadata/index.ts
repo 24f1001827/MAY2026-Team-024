@@ -13,6 +13,7 @@ import { tendersMetadata } from "./tenders.meta"
 import { agenciesMetadata } from "./agencies.meta"
 import { departmentsMetadata } from "./departments.meta"
 import { officersMetadata } from "./officers.meta"
+import { userStatusMetadata } from "./user-status.meta"
 import { notificationsMetadata } from "./notifications.meta"
 import { settingsMetadata } from "./settings.meta"
 
@@ -52,6 +53,7 @@ export const metadataRegistry: MetadataRegistry = validateMetadataModules({
   agencies: agenciesMetadata,
   departments: departmentsMetadata,
   officers: officersMetadata,
+  userStatus: userStatusMetadata,
   notifications: notificationsMetadata,
   settings: settingsMetadata,
 })
