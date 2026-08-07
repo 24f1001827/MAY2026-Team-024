@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 
-import { DepartmentProfile } from "@/features/department/components/department-profile"
+import { AdminDepartmentDashboardView } from "@/features/department/components/admin-department-dashboard-view"
 import { getCurrentUser } from "@/lib/auth/current-user"
 import { publicRoutes, routes } from "@/nav"
 
@@ -16,5 +16,5 @@ export default async function DepartmentDetailPage({
   // Department management is admin-only.
   if (user.role !== "Admin") redirect(routes.href)
 
-  return <DepartmentProfile id={Number(id)} />
+  return <AdminDepartmentDashboardView id={Number(id)} />
 }

@@ -64,6 +64,7 @@ import {
 } from "@/types/complaint"
 import { AVAILABILITY_STATUSES, type AvailabilityStatus } from "@/types/officer"
 import type { Department } from "@/types/department"
+import { PageHeader } from "@/features/common/components/page-header"
 
 /** Page size for the dashboard's paginated tab lists. */
 const TAB_PAGE_SIZE = 6
@@ -400,7 +401,20 @@ function QueueTab({
   )
 }
 
-function MyComplaintsTab({ complaints }: { complaints: Complaint[] }) {
+function MyComplaintsTab({
+  complaints,
+  onAccept,
+  onReject,
+  actingId,
+}: {
+  complaints: Complaint[]
+  /** Accept the pending assignment for a complaint (officer's own queue). */
+  onAccept?: (complaintId: string) => void
+  /** Reject the pending assignment for a complaint. */
+  onReject?: (complaintId: string) => void
+  /** Complaint id with an accept/reject request in flight (disables its row). */
+  actingId?: string | null
+}) {
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState("all")
   const [page, setPage] = useState(1)
@@ -455,9 +469,46 @@ function MyComplaintsTab({ complaints }: { complaints: Complaint[] }) {
         ) : (
           <>
             <ul className="divide-y divide-border">
-              {paged.map((complaint) => (
-                <ComplaintItem key={complaint.id} complaint={complaint} />
-              ))}
+              {paged.map((complaint) => {
+                // A complaint still in "Assigned" is pending this officer's
+                // acceptance — offer Accept / Reject.
+                const pending =
+                  complaint.status === "Assigned" &&
+                  Boolean(onAccept) &&
+                  Boolean(onReject)
+                const busy = actingId === complaint.id
+                return (
+                  <ComplaintItem
+                    key={complaint.id}
+                    complaint={complaint}
+                    action={
+                      pending ? (
+                        <span className="flex shrink-0 items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="brand"
+                            disabled={busy}
+                            onClick={() => onAccept?.(complaint.id)}
+                          >
+                            Accept
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:text-destructive"
+                            disabled={busy}
+                            onClick={() => onReject?.(complaint.id)}
+                          >
+                            Reject
+                          </Button>
+                        </span>
+                      ) : undefined
+                    }
+                  />
+                )
+              })}
             </ul>
             <TabFooter
               startIndex={startIndex}
@@ -566,6 +617,11 @@ export function DepartmentDashboard({
   canManage,
   canAllot,
   showMyComplaints,
+  onAllot,
+  allotting = false,
+  onAccept,
+  onReject,
+  actingId,
 }: {
   department: Department
   /** All officers in the department. */
@@ -584,6 +640,20 @@ export function DepartmentDashboard({
   canAllot: boolean
   /** The viewer is an officer, so show their personal "Complaints" tab. */
   showMyComplaints: boolean
+  /**
+   * Persist an allotment to the backend. Resolves on success (the dialog then
+   * closes and the row leaves the queue). When omitted, allotment is local-only
+   * (mock) — used by pages not yet wired to the API.
+   */
+  onAllot?: (complaintId: string, officerId: string) => Promise<void>
+  /** True while an allotment request is in flight (disables the dialog). */
+  allotting?: boolean
+  /** Officer accepts their pending assignment (My Queue tab). */
+  onAccept?: (complaintId: string) => void
+  /** Officer rejects their pending assignment. */
+  onReject?: (complaintId: string) => void
+  /** Complaint id with an accept/reject in flight. */
+  actingId?: string | null
 }) {
   const [queue, setQueue] = useState<Complaint[]>(initialQueue)
 
@@ -603,13 +673,29 @@ export function DepartmentDashboard({
     setAllotOfficerId(officers[0]?.userId ?? "")
   }
 
-  function handleAllot(event: React.FormEvent<HTMLFormElement>) {
+  async function handleAllot(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!allotTarget || !allotOfficerId) return
 
-    setQueue((prev) => prev.filter((c) => c.id !== allotTarget.id))
+    const target = allotTarget
+    const officerLabel = officerName.get(allotOfficerId) ?? "officer"
+
+    // With a backend handler, persist first and only update the UI on success.
+    if (onAllot) {
+      try {
+        await onAllot(target.id, allotOfficerId)
+      } catch (error) {
+        toast.error("Couldn’t allot complaint", {
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        })
+        return
+      }
+    }
+
+    setQueue((prev) => prev.filter((c) => c.id !== target.id))
     toast.success("Complaint allotted", {
-      description: `Assigned to ${officerName.get(allotOfficerId) ?? "officer"}.`,
+      description: `Assigned to ${officerLabel}.`,
     })
     setAllotTarget(null)
   }
@@ -617,24 +703,19 @@ export function DepartmentDashboard({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            {department.name}
-          </h1>
-          <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-muted-foreground">
-            {department.description}
-          </p>
-        </div>
-        {canManage && (
-          <Button asChild variant="outline">
-            <Link href={routes.departments.detail(department.id).edit}>
-              <HugeiconsIcon icon={PencilEdit02Icon} />
-              Edit department
-            </Link>
-          </Button>
-        )}
-      </div>
+      <PageHeader 
+            title={department.name}
+            description={department.description}
+            actions={canManage ? (
+              <Button asChild variant="outline">
+                <Link href={routes.departments.detail(department.id).edit}>
+                  <HugeiconsIcon icon={PencilEdit02Icon} />
+                  Edit department
+                </Link>
+              </Button>
+            ) : undefined
+          }
+      />
 
       <Tabs defaultValue="overview">
         <TabsList variant="line" className="w-full justify-start">
@@ -738,7 +819,12 @@ export function DepartmentDashboard({
         {/* ---------------------------------------------------------------- */}
         {showMyComplaints && (
           <TabsContent value="mine" className="mt-6">
-            <MyComplaintsTab complaints={myComplaints} />
+            <MyComplaintsTab
+              complaints={myComplaints}
+              onAccept={onAccept}
+              onReject={onReject}
+              actingId={actingId}
+            />
           </TabsContent>
         )}
 
@@ -782,12 +868,17 @@ export function DepartmentDashboard({
                 type="button"
                 variant="outline"
                 onClick={() => setAllotTarget(null)}
+                disabled={allotting}
               >
                 Cancel
               </Button>
-              <Button type="submit" variant="brand" disabled={!allotOfficerId}>
+              <Button
+                type="submit"
+                variant="brand"
+                disabled={!allotOfficerId || allotting}
+              >
                 <HugeiconsIcon icon={SentIcon} />
-                Allot
+                {allotting ? "Allotting…" : "Allot"}
               </Button>
             </DialogFooter>
           </form>
