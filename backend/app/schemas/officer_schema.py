@@ -3,12 +3,14 @@ from marshmallow_enum import EnumField
 
 from app.models import (
     AssignmentStatus,
+    AvailabilityStatus,
     ComplaintPriority,
     ComplaintStatus,
     ReviewDecision,
     TenderStatus,
     ProposalStatus,
 )
+from app.schemas.complaint_schema import ComplaintResponseSchema
 
 
 class OfficerComplaintResponseSchema(Schema):
@@ -291,3 +293,63 @@ class UpdateProposalStatusSchema(Schema):
         by_value=True,
         required=True,
     )
+
+
+class DepartmentOfficerSchema(Schema):
+    """
+    An officer within a department, flattened with their user's display fields
+    and workload — used by the department dashboard's officer list + allotment.
+    """
+
+    user_id = fields.UUID()
+
+    name = fields.String(attribute="user.name")
+
+    email = fields.String(attribute="user.email")
+
+    availability_status = EnumField(
+        AvailabilityStatus,
+        by_value=True,
+    )
+
+    current_workload = fields.Integer()
+
+    max_workload = fields.Integer()
+
+    is_department_head = fields.Boolean()
+
+
+class DepartmentDashboardResponseSchema(Schema):
+    """
+    Aggregate payload for the officer's department dashboard: the department,
+    its officers, and its complaints (the frontend splits complaints into the
+    unassigned queue / the viewer's own / totals via assigned_officer_id).
+    """
+
+    is_department_head = fields.Boolean()
+
+    manual_allotment = fields.Boolean()
+
+    department = fields.Method("get_department")
+
+    officers = fields.Nested(
+        DepartmentOfficerSchema,
+        many=True,
+    )
+
+    complaints = fields.Nested(
+        ComplaintResponseSchema,
+        many=True,
+    )
+
+    def get_department(self, obj):
+        d = obj["department"]
+        return {
+            "id": d.id,
+            "name": d.name,
+            "description": d.description,
+            "budget": str(d.budget) if d.budget is not None else None,
+            "head_officer_id": (
+                str(d.head_officer_id) if d.head_officer_id else None
+            ),
+        }
