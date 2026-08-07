@@ -17,8 +17,8 @@ export default async function EditComplaintPage({
   const user = await getCurrentUser()
 
   if (!user) redirect(publicRoutes.login)
-  // Only admins and citizens can edit the whole complaint.
-  if (user.role !== "Admin" && user.role !== "Citizen") {
+  // Only the citizen owner edits the whole complaint (admins oversee, no edit).
+  if (user.role !== "Citizen") {
     redirect(routes.complaints.detail(id).href)
   }
 

@@ -14,8 +14,8 @@ export default async function NewComplaintPage() {
   const user = await getCurrentUser()
 
   if (!user) redirect(publicRoutes.login)
-  // Only admins and citizens can file a complaint.
-  if (user.role !== "Admin" && user.role !== "Citizen") {
+  // Only citizens file complaints (admins oversee, no create).
+  if (user.role !== "Citizen") {
     redirect(routes.complaints.href)
   }
 
