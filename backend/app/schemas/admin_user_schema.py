@@ -21,6 +21,17 @@ class UserResponseSchema(Schema):
 
     status = EnumField(UserStatus)
 
+    # Officer capacity/load — null for non-officers.
+    current_workload = fields.Method("get_current_workload")
+
+    max_workload = fields.Method("get_max_workload")
+
+    def get_current_workload(self, obj):
+        return obj.officer.current_workload if obj.officer else None
+
+    def get_max_workload(self, obj):
+        return obj.officer.max_workload if obj.officer else None
+
 
 class UpdateUserStatusSchema(Schema):
     """
@@ -32,4 +43,15 @@ class UpdateUserStatusSchema(Schema):
         required=True,
 
         by_value=True,
+    )
+
+
+class UpdateMaxWorkloadSchema(Schema):
+    """
+    Schema for setting an officer's maximum workload (capacity).
+    """
+
+    max_workload = fields.Integer(
+        required=True,
+        validate=validate.Range(min=1, max=1000),
     )
