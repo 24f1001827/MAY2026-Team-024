@@ -15,17 +15,71 @@ from app.models import (
     UserRole,
     NotificationType,
     WorkOrderStatus,
+    AvailabilityStatus,
+    AssignmentStatus,
+    AssignedBy,
 )
 from app.extensions import db
 from flask_jwt_extended import get_jwt_identity
 from app.utils import upload_image, delete_image
 from app.services.notification_service import NotificationService
+from app.services.settings_service import SettingsService
+from app.services.activity_service import ActivityService
 
 
 class ComplaintService:
     """
     Service layer for complaint-related business logic.
     """
+
+    @staticmethod
+    def _auto_assign(complaint):
+        """
+        Auto-assign a freshly created complaint to the least-loaded available
+        officer in its department (availability = Available, below capacity).
+        Sets the assignment PENDING, bumps the officer's workload, and marks the
+        complaint ASSIGNED. If no officer is eligible, the complaint stays in the
+        queue (SUBMITTED) for manual allotment. Returns the officer or None.
+        """
+
+        officers = OfficerRepository.get_by_department_id(
+            complaint.department_id
+        )
+
+        eligible = [
+            o
+            for o in officers
+            if o.availability_status == AvailabilityStatus.AVAILABLE
+            and o.current_workload < o.max_workload
+        ]
+
+        if not eligible:
+            return None
+
+        officer = min(eligible, key=lambda o: o.current_workload)
+
+        ComplaintAssignmentRepository.create(
+            {
+                "complaint_id": complaint.id,
+                "officer_id": officer.user_id,
+                "assigned_by": AssignedBy.SYSTEM,
+                "status": AssignmentStatus.PENDING,
+                "assignment_note": None,
+            }
+        )
+
+        complaint.status = ComplaintStatus.ASSIGNED
+        officer.current_workload += 1
+
+        ActivityService.record(
+            complaint.id,
+            f"Auto-assigned to {officer.user.name}.",
+            user_id=None,
+            status_from=ComplaintStatus.SUBMITTED,
+            status_to=ComplaintStatus.ASSIGNED,
+        )
+
+        return officer
 
     @staticmethod
     def _resolve_department(data):
@@ -89,6 +143,13 @@ class ComplaintService:
 
             db.session.flush()
 
+            ActivityService.record(
+                complaint.id,
+                "Complaint filed.",
+                user_id=user.id,
+                status_to=ComplaintStatus.SUBMITTED,
+            )
+
             for image in images:
 
                 uploaded = upload_image(image)
@@ -101,6 +162,11 @@ class ComplaintService:
                         "public_id": uploaded["public_id"],
                     }
                 )
+
+            # Auto-assign when the org setting is not manual allotment.
+            assigned_officer = None
+            if not SettingsService.is_manual_allotment():
+                assigned_officer = ComplaintService._auto_assign(complaint)
 
             db.session.commit()
 
@@ -115,6 +181,20 @@ class ComplaintService:
                     ),
                 }
             )
+
+            if assigned_officer is not None:
+                NotificationService.create_notification(
+                    {
+                        "user_id": assigned_officer.user_id,
+                        "type": NotificationType.COMPLAINT_ASSIGNED,
+                        "title": "Complaint Assigned",
+                        "message": (
+                            f"You have been auto-assigned complaint "
+                            f"'complaint ID: {complaint.id}, "
+                            f"Complaint title: {complaint.title}'."
+                        ),
+                    }
+                )
 
             return complaint
 
@@ -233,6 +313,12 @@ class ComplaintService:
 
                     db.session.add(complaint_image)
 
+            ActivityService.record(
+                complaint.id,
+                "Complaint details updated.",
+                user_id=user.id,
+            )
+
             ComplaintRepository.update()
 
             return complaint
@@ -296,7 +382,16 @@ class ComplaintService:
         if complaint.status != ComplaintStatus.RESOLVED:
             raise ValueError("Only resolved complaints can be reopened.")
 
+        previous_status = complaint.status
         complaint.status = ComplaintStatus.REOPENED
+
+        ActivityService.record(
+            complaint.id,
+            f"Complaint reopened. Reason: {data['reason']}",
+            user_id=citizen.id,
+            status_from=previous_status,
+            status_to=ComplaintStatus.REOPENED,
+        )
 
         ComplaintRepository.update()
 
@@ -376,9 +471,20 @@ class ComplaintService:
 
         work_order.status = WorkOrderStatus.CLOSED
 
-        officer.current_workload =officer.current_workload - 1,
-    
-        agency.current_projects = agency.current_projects - 1,
+        ActivityService.record(
+            complaint.id,
+            "Complaint closed.",
+            user_id=complaint.citizen_id,
+            status_from=ComplaintStatus.RESOLVED,
+            status_to=ComplaintStatus.CLOSED,
+        )
+
+        # Case leaves the officer's plate on closure. `max(0, …)` guards against
+        # ever going negative; the trailing commas here were a bug (they made
+        # these tuples instead of ints).
+        officer.current_workload = max(0, officer.current_workload - 1)
+
+        agency.current_projects = max(0, agency.current_projects - 1)
 
         NotificationService.create_notification(
             {
