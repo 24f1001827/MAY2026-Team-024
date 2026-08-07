@@ -9,6 +9,7 @@
 
 import { redirect } from "next/navigation"
 
+import { verifyAccessToken } from "@/lib/auth/access-token"
 import {
   readAccessToken,
   readSessionUser,
@@ -19,9 +20,29 @@ import type { UserRole } from "@/types/user"
 
 export type { SessionUser } from "@/lib/auth/session"
 
-/** Resolve the signed-in user from the session cookie, or null. */
+/**
+ * Resolve the signed-in user, or null. Identity and role come from the
+ * *signature-verified* access token (see `lib/auth/access-token.ts`) — never
+ * from the forgeable JSON snapshot — so this result is safe to authorize on.
+ * The snapshot only fills in display fields (`name`, `status`) that the token
+ * does not carry. If the token is missing/invalid, the user is unauthenticated
+ * regardless of what the snapshot cookie says.
+ */
 export async function getCurrentUser(): Promise<SessionUser | null> {
-  return readSessionUser()
+  const token = await readAccessToken()
+  const identity = await verifyAccessToken(token)
+  if (!identity) return null
+
+  const snapshot = await readSessionUser()
+  return {
+    // Authoritative — proven by the signed token.
+    id: identity.id,
+    email: identity.email || snapshot?.email || "",
+    role: identity.role,
+    // Display-only — from the snapshot, safe because they are never gated on.
+    name: snapshot?.name ?? identity.email ?? "",
+    status: snapshot?.status ?? "Active",
+  }
 }
 
 /** Require any authenticated user; redirect to login otherwise. */

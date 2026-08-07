@@ -11,9 +11,9 @@
 
 import { cookies } from "next/headers"
 
-import type { UserRole, UserStatus } from "@/types/user"
 import type { SessionUser } from "@/types/auth"
 import type { BackendSession } from "@/lib/auth/api"
+import { normalizeRole, normalizeStatus } from "@/lib/utils/user/normalize"
 
 export type { SessionUser } from "@/types/auth"
 
@@ -37,12 +37,16 @@ const baseCookieOptions = {
 /** Persist a freshly-issued backend session. Route handlers only. */
 export async function setSessionCookies(session: BackendSession): Promise<void> {
   const store = await cookies()
+  // Normalize casing the same way the admin user rows are (accepts either the
+  // enum NAME "OFFICER"/"PENDING_APPROVAL" or the value "Officer"/"Active"), so
+  // role gating (`requireRoles`, `user.role === "Officer"`) never breaks on
+  // backend serialization drift.
   const user: SessionUser = {
     id: session.user.id,
     name: session.user.name,
     email: session.user.email,
-    role: session.user.role as UserRole,
-    status: session.user.status as UserStatus,
+    role: normalizeRole(session.user.role),
+    status: normalizeStatus(session.user.status),
   }
 
   store.set(ACCESS_COOKIE, session.access_token, baseCookieOptions)
