@@ -1,6 +1,11 @@
-from app.repositories import DepartmentRepository
+from app.repositories import (
+    DepartmentRepository,
+    OfficerRepository,
+    ComplaintRepository,
+)
 from app.extensions import db
 from app.models import Officer
+from app.services.settings_service import SettingsService
 
 
 class DepartmentService:
@@ -28,6 +33,27 @@ class DepartmentService:
             )
 
     @staticmethod
+    def _sync_head_flag(old_head_id, new_head_id):
+        """
+        Keep officers.is_department_head in sync with a department's
+        head_officer_id: clear the previous head's flag and set the new one.
+        No-op when the head is unchanged.
+        """
+
+        if old_head_id == new_head_id:
+            return
+
+        if old_head_id is not None:
+            old = Officer.query.filter_by(user_id=old_head_id).first()
+            if old is not None:
+                old.is_department_head = False
+
+        if new_head_id is not None:
+            new = Officer.query.filter_by(user_id=new_head_id).first()
+            if new is not None:
+                new.is_department_head = True
+
+    @staticmethod
     def create_department(data):
         """
         Create a new department.
@@ -48,6 +74,11 @@ class DepartmentService:
 
         department = DepartmentRepository.create(data)
 
+        DepartmentService._sync_head_flag(
+            None,
+            data.get("head_officer_id"),
+        )
+
         db.session.commit()
 
         return department
@@ -59,6 +90,31 @@ class DepartmentService:
         """
 
         return DepartmentRepository.get_all()
+
+    @staticmethod
+    def get_department_dashboard(department_id):
+        """
+        Aggregate dashboard for a specific department (admin view): the
+        department, its officers, and its complaints. Same shape as the officer
+        dashboard; `is_department_head` is False since the admin isn't the head.
+        """
+
+        department = DepartmentRepository.get_by_id(department_id)
+
+        if department is None:
+            raise ValueError("Department not found.")
+
+        officers = OfficerRepository.get_by_department_id(department_id)
+
+        complaints = ComplaintRepository.get_by_department(department_id)
+
+        return {
+            "department": department,
+            "officers": officers,
+            "complaints": complaints,
+            "is_department_head": False,
+            "manual_allotment": SettingsService.is_manual_allotment(),
+        }
 
     @staticmethod
     def get_department_by_id(department_id):
@@ -110,6 +166,8 @@ class DepartmentService:
                     "Department with this name already exists."
                 )
 
+        old_head_id = department.head_officer_id
+
         if "head_officer_id" in data:
             DepartmentService._validate_head_officer(
                 data["head_officer_id"]
@@ -120,6 +178,12 @@ class DepartmentService:
                 department,
                 key,
                 value,
+            )
+
+        if "head_officer_id" in data:
+            DepartmentService._sync_head_flag(
+                old_head_id,
+                data["head_officer_id"],
             )
 
         DepartmentRepository.update()
