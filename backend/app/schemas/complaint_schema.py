@@ -287,18 +287,18 @@ class ComplaintResponseSchema(Schema):
 
 class ComplaintRemarkResponseSchema(Schema):
     """
-    A remark / activity entry on a complaint's timeline. Status transitions are
-    not tracked on remarks, so status_from/status_to are always null (the
-    frontend timeline models them as nullable).
+    A remark / activity entry on a complaint's timeline. `status_from`/
+    `status_to` are set for status transitions (else null); a null author means
+    a system-generated event, surfaced as "System".
     """
 
     id = fields.Integer()
 
     complaint_id = fields.UUID()
 
-    author_id = fields.UUID(attribute="user_id")
+    author_id = fields.UUID(attribute="user_id", allow_none=True)
 
-    author_name = fields.String(attribute="user.name")
+    author_name = fields.Method("get_author_name")
 
     author_role = fields.Method("get_author_role")
 
@@ -306,11 +306,14 @@ class ComplaintRemarkResponseSchema(Schema):
 
     is_internal = fields.Boolean()
 
-    status_from = fields.Constant(None)
+    status_from = fields.String(allow_none=True)
 
-    status_to = fields.Constant(None)
+    status_to = fields.String(allow_none=True)
 
     created_at = fields.DateTime()
+
+    def get_author_name(self, obj):
+        return obj.user.name if obj.user else "System"
 
     def get_author_role(self, obj):
         return obj.user.role.value if obj.user else None
