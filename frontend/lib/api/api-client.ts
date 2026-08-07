@@ -222,7 +222,14 @@ class ApiClient {
       }
     }
 
-    throw lastError
+    // Unreachable on the normal path (the final attempt always returns or throws
+    // an ApiError in the catch above). Reached only if the loop never ran — e.g.
+    // retries < 0 — leaving lastError null. Normalize to ApiError so every exit
+    // from this method is an ApiError, the invariant every call site relies on
+    // (`error instanceof ApiError`); never let a raw Error or null escape.
+    throw lastError instanceof ApiError
+      ? lastError
+      : ApiError.network(lastError?.message ?? "Request failed")
   }
 
   async get<T = unknown>(
