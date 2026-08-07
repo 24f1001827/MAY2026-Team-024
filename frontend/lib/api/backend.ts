@@ -15,6 +15,12 @@ interface BackendRequest {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
   /** JSON body; omitted for GET/DELETE. */
   json?: unknown
+  /**
+   * Multipart body to forward as-is (e.g. a complaint create/update with
+   * images). When set, no Content-Type is added — fetch derives the multipart
+   * boundary itself. Mutually exclusive with `json`.
+   */
+  formData?: FormData
   /** Query params appended to the path. */
   params?: Record<string, string | undefined>
 }
@@ -35,7 +41,7 @@ export interface BackendResult<T = unknown> {
  */
 export async function backendFetch<T = unknown>(
   path: string,
-  { method = "GET", json, params }: BackendRequest = {},
+  { method = "GET", json, formData, params }: BackendRequest = {},
 ): Promise<BackendResult<T>> {
   const token = await getAccessToken()
   if (!token) {
@@ -49,13 +55,22 @@ export async function backendFetch<T = unknown>(
     }
   }
 
+  // Multipart forwards as-is (no Content-Type — fetch sets the boundary). JSON
+  // bodies are stringified with an explicit Content-Type.
+  const requestBody =
+    formData !== undefined
+      ? formData
+      : json !== undefined
+        ? JSON.stringify(json)
+        : undefined
+
   const res = await fetch(url, {
     method,
     headers: {
       Authorization: `Bearer ${token}`,
       ...(json !== undefined ? { "Content-Type": "application/json" } : {}),
     },
-    body: json !== undefined ? JSON.stringify(json) : undefined,
+    body: requestBody,
     cache: "no-store",
   })
 
