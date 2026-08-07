@@ -3,7 +3,7 @@
  * (snake_case `head_officer_id`). `budget` is sent as a number; the backend
  * accepts it into a Decimal field.
  */
-export interface CreateDepartmentInput {
+export interface CreateDepartmentRequest {
   name: string
   description?: string
   budget?: number
