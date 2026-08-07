@@ -28,6 +28,25 @@ class ComplaintService:
     """
 
     @staticmethod
+    def _resolve_department(data):
+        """
+        Resolve the target department from either department_id (preferred) or
+        department (name). Raises ValueError if it can't be found.
+        """
+
+        department = None
+
+        if data.get("department_id") is not None:
+            department = DepartmentRepository.get_by_id(data["department_id"])
+        elif data.get("department"):
+            department = DepartmentRepository.get_by_name(data["department"])
+
+        if not department:
+            raise ValueError("Department not found.")
+
+        return department
+
+    @staticmethod
     def create_complaint(data, images):
         """
         Create a new complaint.
@@ -44,10 +63,7 @@ class ComplaintService:
             if user.role != UserRole.CITIZEN:
                 raise PermissionError("Only citizens can create complaints.")
 
-            department = DepartmentRepository.get_by_name(data["department"])
-
-            if not department:
-                raise ValueError("Department not found.")
+            department = ComplaintService._resolve_department(data)
 
             complaint = ComplaintRepository.create(
                 {
@@ -60,7 +76,9 @@ class ComplaintService:
                     "address": data["address"],
                     "locality": data["locality"],
                     "city": data["city"],
+                    "district": data.get("district"),
                     "state": data["state"],
+                    "country": data.get("country"),
                     "pincode": data["pincode"],
                     "status": ComplaintStatus.SUBMITTED,
                     "priority": ComplaintPriority.MEDIUM,
@@ -174,10 +192,7 @@ class ComplaintService:
             if complaint.status != ComplaintStatus.SUBMITTED:
                 raise ValueError("Only submitted complaints can be updated.")
 
-            department = DepartmentRepository.get_by_name(data["department"])
-
-            if not department:
-                raise ValueError("Department not found.")
+            department = ComplaintService._resolve_department(data)
 
             complaint.title = data["title"]
             complaint.description = data["description"]
@@ -190,7 +205,9 @@ class ComplaintService:
             complaint.address = data["address"]
             complaint.locality = data["locality"]
             complaint.city = data["city"]
+            complaint.district = data.get("district")
             complaint.state = data["state"]
+            complaint.country = data.get("country")
             complaint.pincode = data["pincode"]
 
             if images:
