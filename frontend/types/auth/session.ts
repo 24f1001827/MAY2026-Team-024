@@ -11,4 +11,10 @@ export interface SessionUser {
   email: string
   role: UserRole
   status: UserStatus
+  /**
+   * True when this user is an officer who heads their department. Drives the
+   * post-login landing and gates the allotment controls (the backend still
+   * enforces head-only allotment). False/absent for non-officers.
+   */
+  isDepartmentHead: boolean
 }
