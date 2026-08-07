@@ -20,6 +20,7 @@ from app.models import (
     AssignedBy,
 )
 from app.extensions import db
+from marshmallow import ValidationError
 from flask_jwt_extended import get_jwt_identity
 from app.utils import upload_image, delete_image
 from app.services.notification_service import NotificationService
@@ -85,18 +86,22 @@ class ComplaintService:
     def _resolve_department(data):
         """
         Resolve the target department from either department_id (preferred) or
-        department (name). Raises ValueError if it can't be found.
+        department (name). Raises ValidationError (-> HTTP 422) if it can't be
+        found: an unknown department is bad input on a request-body field, not
+        a missing resource at the requested URL.
         """
 
         department = None
+        field = "department_id"
 
         if data.get("department_id") is not None:
             department = DepartmentRepository.get_by_id(data["department_id"])
         elif data.get("department"):
+            field = "department"
             department = DepartmentRepository.get_by_name(data["department"])
 
         if not department:
-            raise ValueError("Department not found.")
+            raise ValidationError({field: ["Department not found."]})
 
         return department
 
