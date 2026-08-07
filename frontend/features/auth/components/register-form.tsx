@@ -20,8 +20,8 @@ import { Button } from "@/components/shadcn/button"
 import { Input } from "@/components/shadcn/input"
 import { NativeSelect } from "@/components/shadcn/native-select"
 import { AuthShell, AuthAside } from "@/features/auth/components/auth-shell"
-import { mockDepartments } from "@/components/shared/mock-data"
 import { useRegister } from "@/hooks/auth"
+import { usePublicDepartments } from "@/hooks/department"
 import { toast } from "@/lib/styles/toast-styles"
 import { publicRoutes } from "@/nav"
 import type { UserRole } from "@/types/user"
@@ -85,6 +85,50 @@ function Field({
       </label>
       {children}
     </div>
+  )
+}
+
+/**
+ * Officer-only department picker. Fetches the real department list from the
+ * public endpoint so the submitted `department` name matches a row the backend
+ * can resolve (`DepartmentRepository.get_by_name`). Only mounted for the
+ * officer form, so the query never fires on the citizen/agency pages.
+ */
+function DepartmentSelect() {
+  const { data: departments, isPending, isError, refetch } = usePublicDepartments()
+
+  return (
+    <Field label="Department" htmlFor="department">
+      <NativeSelect
+        id="department"
+        name="department"
+        required
+        defaultValue=""
+        disabled={isPending || isError}
+      >
+        <option value="" disabled>
+          {isPending
+            ? "Loading departments…"
+            : isError
+              ? "Couldn't load departments"
+              : "Select a department"}
+        </option>
+        {departments?.map((department) => (
+          <option key={department.id} value={department.name}>
+            {department.name}
+          </option>
+        ))}
+      </NativeSelect>
+      {isError && (
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="text-xs font-medium text-destructive underline-offset-2 hover:underline"
+        >
+          Retry
+        </button>
+      )}
+    </Field>
   )
 }
 
@@ -230,25 +274,7 @@ export function RegisterForm({ role }: { role: RegisterRole }) {
             </div>
           </Field>
 
-          {role === "Officer" && (
-            <Field label="Department" htmlFor="departmentId">
-              <NativeSelect
-                id="department"
-                name="department"
-                required
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  Select a department
-                </option>
-                {mockDepartments.map((department) => (
-                  <option key={department.id} value={department.name}>
-                    {department.name}
-                  </option>
-                ))}
-              </NativeSelect>
-            </Field>
-          )}
+          {role === "Officer" && <DepartmentSelect />}
 
           {role === "Agency" && (
             <div className="grid gap-4 sm:grid-cols-2">

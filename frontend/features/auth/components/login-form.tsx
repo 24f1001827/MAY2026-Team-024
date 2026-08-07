@@ -16,6 +16,8 @@ import { Input } from "@/components/shadcn/input"
 import { Checkbox } from "@/components/shadcn/checkbox"
 import { AuthShell, AuthAside } from "@/features/auth/components/auth-shell"
 import { useLogin } from "@/hooks/auth"
+import { ApiError } from "@/lib/api/api-client"
+import { classifyAccountStatus } from "@/lib/auth/account-status"
 import { toast } from "@/lib/styles/toast-styles"
 import { publicRoutes, routes } from "@/nav"
 
@@ -44,6 +46,17 @@ export function LoginForm() {
           router.refresh()
         },
         onError: (error) => {
+          // A 403 means the account exists but isn't active (pending / rejected
+          // / blocked) — send them to the matching status page instead of a toast.
+          if (error instanceof ApiError && error.status === 403) {
+            const reason = classifyAccountStatus(error.message)
+            if (reason) {
+              // Carry the email so the status shell can show it in the footer.
+              const query = new URLSearchParams({ email }).toString()
+              router.push(`${publicRoutes.accountStatus[reason]}?${query}`)
+              return
+            }
+          }
           toast.error("Couldn't sign in", {
             description:
               error instanceof Error
