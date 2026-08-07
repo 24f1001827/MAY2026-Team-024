@@ -17,10 +17,12 @@ class ComplaintRemark(BaseModel):
         nullable=False,
     )
 
+    # Nullable: system-generated activity (e.g. auto-assignment) has no user
+    # author — it renders as "System" on the timeline.
     user_id = db.Column(
         db.UUID(as_uuid=True),
         db.ForeignKey("users.id"),
-        nullable=False,
+        nullable=True,
     )
 
     remark = db.Column(
@@ -32,6 +34,18 @@ class ComplaintRemark(BaseModel):
         db.Boolean,
         default=False,
         nullable=False,
+    )
+
+    # Status transition captured with the activity entry (enum values as
+    # strings), null for non-status events like creation/updation.
+    status_from = db.Column(
+        db.String(50),
+        nullable=True,
+    )
+
+    status_to = db.Column(
+        db.String(50),
+        nullable=True,
     )
 
     # -------------------------
