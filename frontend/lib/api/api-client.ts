@@ -355,6 +355,20 @@ class ApiClient {
     )
     return this.handleResponse<T>(response)
   }
+
+  /** PUT raw FormData (multipart updates, e.g. replacing complaint images). */
+  async putFormData<T = unknown>(
+    endpoint: string,
+    formData: FormData,
+    options?: RequestOptions,
+  ): Promise<T> {
+    const response = await this.fetchWithRetry(
+      this.buildUrl(endpoint),
+      { method: "PUT", body: formData },
+      { timeout: UPLOAD_TIMEOUT_MS, retries: 0, ...options },
+    )
+    return this.handleResponse<T>(response)
+  }
 }
 
 export const apiClient = new ApiClient()
@@ -368,4 +382,5 @@ export const api = {
   delete: apiClient.delete.bind(apiClient),
   postMultipart: apiClient.postMultipart.bind(apiClient),
   postFormData: apiClient.postFormData.bind(apiClient),
+  putFormData: apiClient.putFormData.bind(apiClient),
 }
