@@ -19,6 +19,28 @@ down_revision = 'a1b2c3d4e5f6'
 branch_labels = None
 depends_on = None
 
+ENUM_TYPE = 'complaintstatus'
+
+
+def _rename_enum_label(old, new):
+    """SQL that renames an enum label only if it is actually present."""
+    return f"""
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_enum e
+        JOIN pg_type t ON t.oid = e.enumtypid
+        WHERE t.typname = '{ENUM_TYPE}'
+          AND pg_catalog.pg_type_is_visible(t.oid)
+          AND e.enumlabel = '{old}'
+    ) THEN
+        ALTER TYPE {ENUM_TYPE} RENAME VALUE '{old}' TO '{new}';
+    END IF;
+END
+$$;
+"""
+
 
 def upgrade():
     with op.batch_alter_table('complaints', schema=None) as batch_op:
@@ -31,17 +53,15 @@ def upgrade():
 
     # Native Postgres enums store the member NAME token; rename in place.
     # RENAME VALUE is transaction-safe (Postgres 10+).
-    op.execute(
-        "ALTER TYPE complaintstatus "
-        "RENAME VALUE 'TENDER_ALLOTED' TO 'TENDER_ALLOTTED'"
-    )
+    #
+    # Guarded because the old label is absent on any database bootstrapped from
+    # the current models (already spelled TENDER_ALLOTTED) and then stamped --
+    # an unguarded RENAME VALUE would abort the whole migration there.
+    op.execute(_rename_enum_label('TENDER_ALLOTED', 'TENDER_ALLOTTED'))
 
 
 def downgrade():
-    op.execute(
-        "ALTER TYPE complaintstatus "
-        "RENAME VALUE 'TENDER_ALLOTTED' TO 'TENDER_ALLOTED'"
-    )
+    op.execute(_rename_enum_label('TENDER_ALLOTTED', 'TENDER_ALLOTED'))
 
     with op.batch_alter_table('complaints', schema=None) as batch_op:
         batch_op.drop_column('country')
