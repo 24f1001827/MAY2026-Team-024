@@ -65,18 +65,3 @@ export interface Complaint {
   createdAt: string
   updatedAt: string
 }
-
-/** Payload for creating a complaint (citizen-authored fields only). */
-export interface CreateComplaintInput {
-  title: string
-  description: string
-  departmentId: number
-  priority: ComplaintPriority
-  address: string
-  locality: string
-  city: string
-  district: string
-  state: string
-  pincode: string
-  country: string
-}
