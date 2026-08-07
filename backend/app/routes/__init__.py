@@ -8,3 +8,4 @@ from .notification_route import notification_bp
 from .department_route import department_bp
 from .admin_department_route import admin_department_bp
 from .settings_route import settings_bp
+from .officers_directory_route import officers_bp
