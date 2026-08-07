@@ -43,4 +43,5 @@ from .department_schema import (
     CreateDepartmentSchema,
     UpdateDepartmentSchema,
     DepartmentResponseSchema,
+    PublicDepartmentSchema,
 )
