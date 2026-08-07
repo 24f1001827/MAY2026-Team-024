@@ -13,6 +13,15 @@ export function useDepartmentDashboard() {
   })
 }
 
+/** Shared officer directory (any authenticated user). */
+export function useOfficerDirectory() {
+  return useQuery({
+    queryKey: officerKeys.directory(),
+    queryFn: () => officerService.listDirectory(),
+    staleTime: 5 * 60 * 1000, // near-static; cache generously.
+  })
+}
+
 /** Head-only: allot a complaint, then refresh the dashboard. */
 export function useAllotComplaint() {
   const qc = useQueryClient()
