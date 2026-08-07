@@ -36,6 +36,15 @@ class Officer(BaseModel):
         nullable=False,
     )
 
+    # True when this officer heads their department. Kept in sync with
+    # Department.head_officer_id (set via the department create/update flow);
+    # used for allotment authorization and the officer's login landing.
+    is_department_head = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False,
+    )
+
     # -------------------------
     # Relationships
     # -------------------------
