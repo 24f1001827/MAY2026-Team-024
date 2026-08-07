@@ -94,11 +94,10 @@ export function ComplaintDetail({
   const [message, setMessage] = useState("")
   const [postOpen, setPostOpen] = useState(false)
 
-  // Admins & citizens can edit the whole complaint; admins, officers, and
-  // agencies can post activity (remarks + status moves). A read-only (public)
-  // view disables both regardless of role.
-  const canEdit =
-    !readOnly && (currentRole === "Admin" || currentRole === "Citizen")
+  // Only the citizen owner edits the whole complaint; admins oversee (no
+  // create/edit). Admins, officers, and agencies can post activity (remarks +
+  // status moves). A read-only (public) view disables both regardless of role.
+  const canEdit = !readOnly && currentRole === "Citizen"
   const canManage =
     !readOnly &&
     (currentRole === "Admin" ||
@@ -262,9 +261,11 @@ export function ComplaintDetail({
                           <span className="text-sm font-medium text-foreground">
                             {remark.authorName}
                           </span>
-                          <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                            {remark.authorRole}
-                          </span>
+                          {remark.authorRole && (
+                            <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                              {remark.authorRole}
+                            </span>
+                          )}
                           <span className="text-xs text-muted-foreground">
                             {formatShortDate(remark.createdAt)}
                           </span>
