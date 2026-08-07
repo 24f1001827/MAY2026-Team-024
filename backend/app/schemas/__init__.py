@@ -31,6 +31,7 @@ from .officer_schema import (
     UpdateProposalStatusSchema,
     DepartmentOfficerSchema,
     DepartmentDashboardResponseSchema,
+    OfficerDirectorySchema,
 )
 from .admin_budget_schema import AllocateBudgetSchema
 from .agency_schema import (
