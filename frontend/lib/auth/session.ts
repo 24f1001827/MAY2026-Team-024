@@ -47,6 +47,7 @@ export async function setSessionCookies(session: BackendSession): Promise<void> 
     email: session.user.email,
     role: normalizeRole(session.user.role),
     status: normalizeStatus(session.user.status),
+    isDepartmentHead: Boolean(session.user.is_department_head),
   }
 
   store.set(ACCESS_COOKIE, session.access_token, baseCookieOptions)

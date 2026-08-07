@@ -42,6 +42,9 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     // Display-only — from the snapshot, safe because they are never gated on.
     name: snapshot?.name ?? identity.email ?? "",
     status: snapshot?.status ?? "Active",
+    // Routing hint only (post-login landing + UI gating); the backend enforces
+    // head-only allotment, so it's safe to read from the snapshot.
+    isDepartmentHead: snapshot?.isDepartmentHead ?? false,
   }
 }
 

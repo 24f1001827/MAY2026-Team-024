@@ -17,6 +17,7 @@ export interface BackendSession {
     email: string
     role: string
     status: string
+    is_department_head?: boolean
   }
   access_token: string
   refresh_token: string
