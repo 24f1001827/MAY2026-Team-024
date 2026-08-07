@@ -34,12 +34,19 @@ const STATUS_BY_KEY: Record<string, UserStatus> = {
   Blocked: "Blocked",
 }
 
-export function normalizeRole(raw: string): UserRole {
-  return ROLE_BY_KEY[raw] ?? (raw as UserRole)
+/**
+ * Null when `raw` matches no known role — callers decide how to fail. Casting
+ * the unknown string through instead (the previous behaviour) typechecked but
+ * produced a value outside the union, so every `role === "Officer"` comparison
+ * downstream silently went false.
+ */
+export function normalizeRole(raw: string): UserRole | null {
+  return ROLE_BY_KEY[raw] ?? null
 }
 
-export function normalizeStatus(raw: string): UserStatus {
-  return STATUS_BY_KEY[raw] ?? (raw as UserStatus)
+/** Null when `raw` matches no known status. See `normalizeRole`. */
+export function normalizeStatus(raw: string): UserStatus | null {
+  return STATUS_BY_KEY[raw] ?? null
 }
 
 /** Raw user row as it arrives from the backend (enum fields still strings). */
@@ -54,15 +61,42 @@ export interface RawAdminUser {
   max_workload?: number | null
 }
 
-export function normalizeAdminUser(raw: RawAdminUser): AdminUser {
+/**
+ * Null when the row's role/status fall outside the known enums — such a row
+ * can't be role-gated or acted on correctly. Callers listing users should drop
+ * these (see `normalizeAdminUsers`); callers resolving one specific user should
+ * treat null as an error.
+ */
+export function normalizeAdminUser(raw: RawAdminUser): AdminUser | null {
+  const role = normalizeRole(raw.role)
+  const status = normalizeStatus(raw.status)
+
+  if (!role || !status) {
+    console.error(
+      `[admin-user] dropping unclassifiable row (id=${raw.id}): ` +
+        `role=${JSON.stringify(raw.role)}, status=${JSON.stringify(raw.status)}`,
+    )
+    return null
+  }
+
   return {
     id: raw.id,
     name: raw.name,
     email: raw.email,
     phone: raw.phone ?? "",
-    role: normalizeRole(raw.role),
-    status: normalizeStatus(raw.status),
+    role,
+    status,
     currentWorkload: raw.current_workload ?? null,
     maxWorkload: raw.max_workload ?? null,
   }
+}
+
+/**
+ * Normalize a list of user rows, dropping any the frontend can't classify so a
+ * single malformed row doesn't take out the whole listing.
+ */
+export function normalizeAdminUsers(raws: RawAdminUser[]): AdminUser[] {
+  return raws
+    .map(normalizeAdminUser)
+    .filter((user): user is AdminUser => user !== null)
 }
