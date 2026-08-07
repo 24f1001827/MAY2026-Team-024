@@ -11,12 +11,9 @@ export default async function DashboardPage() {
   // map, so send them straight there.
   if (currentUser?.role === "Citizen") redirect(routes.complaints.href)
 
-  // NOTE: officers are intentionally NOT redirected to /dashboard/department
-  // yet. That page still resolves the officer's department from mock data, so a
-  // real (backend-authenticated) officer isn't found there and it bounces back
-  // here — an infinite redirect loop. Restore this redirect once the officers
-  // module is integrated:
-  //   if (currentUser?.role === "Officer") redirect(routes.department)
+  // Officers work out of their department dashboard (queue + allotment), which
+  // is now backend-integrated (GET /officer/department/dashboard).
+  if (currentUser?.role === "Officer") redirect(routes.department)
 
   // Admins get the user-management console as their home.
   if (currentUser?.role === "Admin") {
