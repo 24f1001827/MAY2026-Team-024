@@ -1,5 +1,4 @@
 import { SettingsForm } from "@/features/settings/components/settings-form"
-import { mockAppSettings } from "@/components/shared/mock-data"
 import { requireUser } from "@/lib/auth/current-user"
 
 export default async function SettingsPage() {
@@ -15,7 +14,6 @@ export default async function SettingsPage() {
         phone: "",
         role: user.role,
       }}
-      manualAllotment={mockAppSettings.manualAllotment}
     />
   )
 }
