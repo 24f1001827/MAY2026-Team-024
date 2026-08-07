@@ -77,10 +77,33 @@ export function DepartmentForm({
     const budgetRaw = String(data.get("budget") ?? "").trim()
     const headOfficerId = String(data.get("headOfficerId") ?? "")
 
+    // Guard: a whitespace-only name trims to "" — don't send it.
+    if (!name) {
+      toast.error("Name is required", {
+        description: "Enter a department name.",
+      })
+      return
+    }
+
+    // Guard: parse the budget explicitly so a non-numeric value (possible via
+    // DOM/manual edits) fails fast here instead of becoming NaN → JSON `null`,
+    // which would silently clear the budget on update.
+    let budget: number | undefined
+    if (budgetRaw) {
+      const parsed = Number(budgetRaw)
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        toast.error("Invalid budget", {
+          description: "Budget must be a non-negative number.",
+        })
+        return
+      }
+      budget = parsed
+    }
+
     const base: CreateDepartmentInput = {
       name,
       description: description || undefined,
-      budget: budgetRaw ? Number(budgetRaw) : undefined,
+      budget,
       // Empty string → null clears/omits the head.
       head_officer_id: headOfficerId || null,
     }
