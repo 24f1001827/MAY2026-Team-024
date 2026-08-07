@@ -13,13 +13,36 @@ import {
   type RawDepartmentDashboard,
 } from "@/lib/utils/department/dashboard-normalize"
 import type { DepartmentDashboardData } from "@/types/department"
+import type {
+  AvailabilityStatus,
+  OfficerDirectoryItem,
+} from "@/types/officer"
 
 /** Backend success envelope: `{ success, message, data }`. */
 interface Envelope<T> {
   data: T
 }
 
+/** Raw directory row from the backend. */
+interface RawOfficerDirectory {
+  user_id: string
+  name: string
+  department?: string | null
+  availability_status: string
+}
+
 export const officerService = {
+  /** Shared officer directory (name, department, availability) — any auth user. */
+  async listDirectory(): Promise<OfficerDirectoryItem[]> {
+    const res = await api.get<Envelope<RawOfficerDirectory[]>>("/officers")
+    return (res.data ?? []).map((o) => ({
+      userId: o.user_id,
+      name: o.name,
+      department: o.department ?? "Unassigned",
+      availabilityStatus: o.availability_status as AvailabilityStatus,
+    }))
+  },
+
   /** The logged-in officer's department dashboard (department + officers + complaints). */
   async getDepartmentDashboard(): Promise<DepartmentDashboardData> {
     const res = await api.get<Envelope<RawDepartmentDashboard>>(
