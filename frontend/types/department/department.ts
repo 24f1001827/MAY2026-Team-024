@@ -13,6 +13,12 @@ export interface Department {
    * designates one.
    */
   headOfficerId: string | null
+  /**
+   * Display name of the head officer, resolved by the backend. Optional —
+   * unset in mock data (which resolves names separately); populated when a
+   * department comes from the API.
+   */
+  headOfficerName?: string | null
   createdAt: string
   updatedAt: string
 }
