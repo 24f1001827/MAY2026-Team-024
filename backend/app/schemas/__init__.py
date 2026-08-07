@@ -8,6 +8,7 @@ from .auth_schema import (
 from .complaint_schema import (
     ComplaintSchema,
     ComplaintResponseSchema,
+    ComplaintDetailResponseSchema,
     AssignComplaintSchema,
     ReopenComplaintSchema,
 )
