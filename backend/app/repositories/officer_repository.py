@@ -37,3 +37,20 @@ class OfficerRepository:
         .order_by(Officer.created_at.asc())
         .all()
         )
+
+    @staticmethod
+    def get_all():
+        """
+        Retrieve all active officers (any department), ordered by name — for the
+        shared officer directory.
+        """
+
+        return (
+            Officer.query.join(User)
+            .filter(
+                Officer.deleted_at.is_(None),
+                User.status == UserStatus.ACTIVE,
+            )
+            .order_by(User.name.asc())
+            .all()
+        )
