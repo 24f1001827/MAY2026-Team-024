@@ -1,6 +1,15 @@
 import re
 
-from marshmallow import Schema, ValidationError, fields, validates,validate
+from marshmallow import (
+    Schema,
+    ValidationError,
+    fields,
+    validates,
+    validates_schema,
+    validate,
+)
+
+from app.models.enums import AssignmentStatus
 
 
 class ComplaintSchema(Schema):
@@ -11,7 +20,10 @@ class ComplaintSchema(Schema):
     title = fields.String(required=True)
     description = fields.String(required=True)
 
-    department = fields.String(required=True)
+    # Either department_id (preferred) or department (name) identifies the
+    # target department; validated in `validate_department_reference`.
+    department_id = fields.Integer(required=False)
+    department = fields.String(required=False)
 
     latitude = fields.Float(required=True)
     longitude = fields.Float(required=True)
@@ -19,7 +31,9 @@ class ComplaintSchema(Schema):
     address = fields.String(required=True)
     locality = fields.String(required=True)
     city = fields.String(required=True)
+    district = fields.String(required=True)
     state = fields.String(required=True)
+    country = fields.String(required=True)
     pincode = fields.String(required=True)
 
     @validates("title")
@@ -52,7 +66,7 @@ class ComplaintSchema(Schema):
     @validates("department")
     def validate_department(self, value, **kwargs):
         """
-        Validate department name.
+        Validate department name (only when the name form is used).
         """
 
         if len(value.strip()) == 0:
@@ -63,6 +77,40 @@ class ComplaintSchema(Schema):
         if len(value) > 100:
             raise ValidationError(
                 "Department name cannot exceed 100 characters."
+            )
+
+    @validates_schema
+    def validate_department_reference(self, data, **kwargs):
+        """
+        Require exactly one way to identify the department: department_id
+        (preferred) or department (name).
+        """
+
+        if data.get("department_id") is None and not data.get("department"):
+            raise ValidationError(
+                {"department_id": ["A department_id or department name is required."]}
+            )
+
+    @validates("district")
+    def validate_district(self, value, **kwargs):
+        """
+        Validate district.
+        """
+
+        if len(value.strip()) < 2:
+            raise ValidationError(
+                "District is required."
+            )
+
+    @validates("country")
+    def validate_country(self, value, **kwargs):
+        """
+        Validate country.
+        """
+
+        if len(value.strip()) < 2:
+            raise ValidationError(
+                "Country is required."
             )
 
     @validates("latitude")
@@ -147,6 +195,8 @@ class ComplaintImageResponseSchema(Schema):
     Schema for complaint images.
     """
 
+    id = fields.Integer()
+
     image_url = fields.String()
 
 
@@ -161,11 +211,23 @@ class ComplaintResponseSchema(Schema):
 
     description = fields.String()
 
+    citizen_id = fields.UUID()
+
+    department_id = fields.Integer()
+
     department = fields.Method("get_department")
+
+    # The officer this complaint is currently allotted to (users.id), or null
+    # while it waits in the department's unassigned queue.
+    assigned_officer_id = fields.Method("get_assigned_officer_id")
 
     status = fields.Method("get_status")
 
     priority = fields.Method("get_priority")
+
+    ai_category = fields.String()
+
+    ai_priority_score = fields.Integer()
 
     latitude = fields.Float()
 
@@ -177,7 +239,11 @@ class ComplaintResponseSchema(Schema):
 
     city = fields.String()
 
+    district = fields.String(allow_none=True)
+
     state = fields.String()
+
+    country = fields.String(allow_none=True)
 
     pincode = fields.String()
 
@@ -198,6 +264,71 @@ class ComplaintResponseSchema(Schema):
 
     def get_priority(self, obj):
         return obj.priority.value
+
+    def get_assigned_officer_id(self, obj):
+        """
+        The officer_id of the most recent non-rejected assignment, or None.
+        (An unassigned complaint has no active assignment.)
+        """
+
+        active = [
+            a
+            for a in obj.assignments
+            if a.status
+            not in (AssignmentStatus.REJECTED, AssignmentStatus.ESCALATED)
+        ]
+
+        if not active:
+            return None
+
+        latest = max(active, key=lambda a: a.created_at)
+        return str(latest.officer_id)
+
+
+class ComplaintRemarkResponseSchema(Schema):
+    """
+    A remark / activity entry on a complaint's timeline. Status transitions are
+    not tracked on remarks, so status_from/status_to are always null (the
+    frontend timeline models them as nullable).
+    """
+
+    id = fields.Integer()
+
+    complaint_id = fields.UUID()
+
+    author_id = fields.UUID(attribute="user_id")
+
+    author_name = fields.String(attribute="user.name")
+
+    author_role = fields.Method("get_author_role")
+
+    message = fields.String(attribute="remark")
+
+    is_internal = fields.Boolean()
+
+    status_from = fields.Constant(None)
+
+    status_to = fields.Constant(None)
+
+    created_at = fields.DateTime()
+
+    def get_author_role(self, obj):
+        return obj.user.role.value if obj.user else None
+
+
+class ComplaintDetailResponseSchema(ComplaintResponseSchema):
+    """
+    Detail response: the full complaint plus its public activity timeline.
+    Internal remarks (is_internal) are omitted — they're staff-only notes.
+    Used only by the single-complaint GET endpoints, not the list endpoints.
+    """
+
+    remarks = fields.Method("get_remarks")
+
+    def get_remarks(self, obj):
+        visible = [r for r in obj.remarks if not r.is_internal]
+        visible.sort(key=lambda r: r.created_at)
+        return ComplaintRemarkResponseSchema(many=True).dump(visible)
 
 
 class AssignComplaintSchema(Schema):
