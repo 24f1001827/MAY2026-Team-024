@@ -20,6 +20,8 @@ from app.schemas import (
     UpdateProposalStatusSchema,
     CreateWorkOrderSchema,
     MarkWorkOrderIncompleteSchema,
+    DepartmentDashboardResponseSchema,
+    AssignComplaintSchema,
 )
 from app.services import OfficerService
 
@@ -41,6 +43,8 @@ officer_proposal_list_schema = OfficerProposalListSchema(
 )
 officer_proposal_detail_schema = OfficerProposalDetailSchema()
 update_proposal_status_schema = UpdateProposalStatusSchema()
+department_dashboard_schema = DepartmentDashboardResponseSchema()
+assign_complaint_schema = AssignComplaintSchema()
 
 
 @officer_bp.get("/complaints")
@@ -76,6 +80,112 @@ def get_my_complaints():
                     "message": str(e),
                 }
             ),
+            404,
+        )
+
+    except Exception as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
+
+@officer_bp.get("/department/dashboard")
+@jwt_required()
+@role_required(UserRole.OFFICER)
+def get_department_dashboard():
+    """
+    Aggregate dashboard for the logged-in officer's department: the department,
+    its officers, and its complaints. Allotment is head-only (enforced on the
+    allot endpoint); the response includes `is_department_head` so the UI can
+    gate the allot controls.
+    """
+    try:
+        user_id = get_jwt_identity()
+
+        dashboard = OfficerService.get_my_department_dashboard(user_id)
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Department dashboard retrieved successfully.",
+                    "data": department_dashboard_schema.dump(dashboard),
+                }
+            ),
+            200,
+        )
+
+    except ValueError as e:
+        return (
+            jsonify({"success": False, "message": str(e)}),
+            404,
+        )
+
+    except Exception as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
+
+@officer_bp.post("/complaints/<uuid:complaint_id>/allot")
+@jwt_required()
+@role_required(UserRole.OFFICER)
+def allot_complaint(complaint_id):
+    """
+    Allot (assign) a complaint to an officer in the department. Head-only.
+    """
+    try:
+        user_id = get_jwt_identity()
+
+        data = assign_complaint_schema.load(request.get_json())
+
+        OfficerService.allot_complaint(user_id, complaint_id, data)
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Complaint allotted successfully.",
+                }
+            ),
+            200,
+        )
+
+    except ValidationError as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Validation failed.",
+                    "errors": err.messages,
+                }
+            ),
+            422,
+        )
+
+    except PermissionError as e:
+        return (
+            jsonify({"success": False, "message": str(e)}),
+            403,
+        )
+
+    except ValueError as e:
+        return (
+            jsonify({"success": False, "message": str(e)}),
             404,
         )
 
