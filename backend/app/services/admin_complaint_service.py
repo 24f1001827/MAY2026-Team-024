@@ -20,6 +20,7 @@ from app.repositories import (
 )
 
 from app.services.notification_service import NotificationService
+from app.services.activity_service import ActivityService
 
 
 class AdminComplaintService:
@@ -106,7 +107,19 @@ class AdminComplaintService:
                 }
             )
 
+        previous_status = complaint.status
         complaint.status = ComplaintStatus.ASSIGNED
+        # Count the case toward the assignee's workload immediately (released on
+        # reject / closure).
+        officer.current_workload += 1
+
+        ActivityService.record(
+            complaint.id,
+            f"Assigned to {officer.user.name} by admin.",
+            user_id=admin.id,
+            status_from=previous_status,
+            status_to=ComplaintStatus.ASSIGNED,
+        )
 
         db.session.commit()
         NotificationService.create_notification(
