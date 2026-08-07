@@ -33,3 +33,5 @@ from .work_order import WorkOrder
 
 from .notification import Notification
 from .audit_log import AuditLog
+
+from .app_settings import AppSettings
