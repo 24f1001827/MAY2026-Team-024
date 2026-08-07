@@ -7,3 +7,5 @@ from .officer_service import OfficerService
 from .admin_budget_service import AdminBudgetService
 from .agency_service import AgencyService
 from .department_service import DepartmentService
+from .settings_service import SettingsService
+from .activity_service import ActivityService

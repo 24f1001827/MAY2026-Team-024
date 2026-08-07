@@ -17,7 +17,8 @@ from app.routes import (
     agency_bp,
     notification_bp,
     department_bp,
-    admin_department_bp
+    admin_department_bp,
+    settings_bp
 )
 
 from app.extensions import init_google_oauth, configure_cloudinary
@@ -67,4 +68,5 @@ def create_app():
     app.register_blueprint(notification_bp)
     app.register_blueprint(department_bp)
     app.register_blueprint(admin_department_bp)
+    app.register_blueprint(settings_bp)
     return app

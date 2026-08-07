@@ -13,7 +13,11 @@ from .complaint_schema import (
     ReopenComplaintSchema,
 )
 
-from .admin_user_schema import UserResponseSchema, UpdateUserStatusSchema
+from .admin_user_schema import (
+    UserResponseSchema,
+    UpdateUserStatusSchema,
+    UpdateMaxWorkloadSchema,
+)
 from .officer_schema import (
     OfficerComplaintResponseSchema,
     ComplaintAssignmentResponseSchema,
@@ -25,6 +29,8 @@ from .officer_schema import (
     OfficerProposalListSchema,
     OfficerProposalDetailSchema,
     UpdateProposalStatusSchema,
+    DepartmentOfficerSchema,
+    DepartmentDashboardResponseSchema,
 )
 from .admin_budget_schema import AllocateBudgetSchema
 from .agency_schema import (
@@ -46,3 +52,4 @@ from .department_schema import (
     DepartmentResponseSchema,
     PublicDepartmentSchema,
 )
+from .settings_schema import SettingsResponseSchema, UpdateSettingsSchema
