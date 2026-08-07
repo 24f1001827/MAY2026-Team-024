@@ -26,6 +26,21 @@ export const USER_COOKIE = "rastro_user"
 
 const MAX_AGE = 60 * 60 * 24 * 7 // 7 days
 
+/**
+ * The backend returned a role/status outside the known enums — a backend/frontend
+ * drift. Thrown instead of persisting an unusable session; `/api/auth/login`
+ * turns it into a 502.
+ */
+export class UnknownSessionRoleError extends Error {
+  constructor(role: string, status: string) {
+    super(
+      `Backend returned an unrecognized role/status: ` +
+        `role=${JSON.stringify(role)}, status=${JSON.stringify(status)}`,
+    )
+    this.name = "UnknownSessionRoleError"
+  }
+}
+
 const baseCookieOptions = {
   httpOnly: true,
   sameSite: "lax" as const,
@@ -41,12 +56,21 @@ export async function setSessionCookies(session: BackendSession): Promise<void> 
   // enum NAME "OFFICER"/"PENDING_APPROVAL" or the value "Officer"/"Active"), so
   // role gating (`requireRoles`, `user.role === "Officer"`) never breaks on
   // backend serialization drift.
+  const role = normalizeRole(session.user.role)
+  const status = normalizeStatus(session.user.status)
+
+  // Refuse to persist a session we can't role-gate: an unknown role would fail
+  // every `requireRoles` check in a confusing way instead of failing here.
+  if (!role || !status) {
+    throw new UnknownSessionRoleError(session.user.role, session.user.status)
+  }
+
   const user: SessionUser = {
     id: session.user.id,
     name: session.user.name,
     email: session.user.email,
-    role: normalizeRole(session.user.role),
-    status: normalizeStatus(session.user.status),
+    role,
+    status,
     isDepartmentHead: Boolean(session.user.is_department_head),
   }
 

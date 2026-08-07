@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { backendLogin } from "@/lib/auth/api"
-import { setSessionCookies } from "@/lib/auth/session"
+import { setSessionCookies, UnknownSessionRoleError } from "@/lib/auth/session"
 
 /**
  * POST /api/auth/login
@@ -44,7 +44,18 @@ export async function POST(request: Request) {
     )
   }
 
-  await setSessionCookies(body.data)
+  try {
+    await setSessionCookies(body.data)
+  } catch (err) {
+    if (err instanceof UnknownSessionRoleError) {
+      console.error("[auth]", err.message)
+      return NextResponse.json(
+        { message: "Unable to sign in. Please try again." },
+        { status: 502 },
+      )
+    }
+    throw err
+  }
 
   return NextResponse.json({ user: body.data.user })
 }

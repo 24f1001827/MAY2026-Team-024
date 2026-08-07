@@ -78,8 +78,13 @@ export async function verifyAccessToken(
     const role = payload.role
     if (typeof sub !== "string" || typeof role !== "string") return null
 
+    // A role we don't recognize can't be gated on — treat it as unauthenticated
+    // rather than admitting the request with an unusable role.
+    const normalizedRole = normalizeRole(role)
+    if (!normalizedRole) return null
+
     const email = typeof payload.email === "string" ? payload.email : ""
-    return { id: sub, email, role: normalizeRole(role) }
+    return { id: sub, email, role: normalizedRole }
   } catch {
     // Invalid signature, expired, malformed — all mean "not authenticated".
     return null

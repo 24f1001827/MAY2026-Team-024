@@ -13,6 +13,7 @@
 import { api } from "@/lib/api/api-client"
 import {
   normalizeAdminUser,
+  normalizeAdminUsers,
   type RawAdminUser,
 } from "@/lib/utils/user/normalize"
 import type { AdminUser, AdminUserFilters } from "@/types/admin-user"
@@ -23,6 +24,20 @@ interface Envelope<T> {
   data: T
 }
 
+/**
+ * A mutation response is the specific row the admin just acted on, so an
+ * unclassifiable one is an error rather than something to silently drop.
+ */
+function requireUser(raw: RawAdminUser): AdminUser {
+  const user = normalizeAdminUser(raw)
+  if (!user) {
+    throw new Error(
+      `Server returned a user with an unrecognized role/status (id=${raw.id}).`,
+    )
+  }
+  return user
+}
+
 export const adminUserService = {
   /** List users, optionally filtered by role/status (e.g. pending approvals). */
   async list(filters: AdminUserFilters = {}): Promise<AdminUser[]> {
@@ -30,8 +45,9 @@ export const adminUserService = {
       ...(filters.role ? { role: filters.role } : {}),
       ...(filters.status ? { status: filters.status } : {}),
     })
-    // Backend enum fields may arrive by name ("OFFICER") or value ("Officer").
-    return (res.data ?? []).map(normalizeAdminUser)
+    // Backend enum fields may arrive by name ("OFFICER") or value ("Officer");
+    // rows with an unrecognized role/status are dropped rather than rendered.
+    return normalizeAdminUsers(res.data ?? [])
   },
 
   /** Change a user's status (approve → "Active", reject → "Rejected"). */
@@ -40,7 +56,7 @@ export const adminUserService = {
       `/admin/users/${id}/status`,
       { status },
     )
-    return normalizeAdminUser(res.data)
+    return requireUser(res.data)
   },
 
   /** Set an officer's maximum workload (capacity). */
@@ -49,6 +65,6 @@ export const adminUserService = {
       `/admin/users/${id}/max-workload`,
       { max_workload: maxWorkload },
     )
-    return normalizeAdminUser(res.data)
+    return requireUser(res.data)
   },
 }
