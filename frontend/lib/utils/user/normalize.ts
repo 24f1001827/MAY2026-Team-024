@@ -50,6 +50,8 @@ export interface RawAdminUser {
   phone?: string | null
   role: string
   status: string
+  current_workload?: number | null
+  max_workload?: number | null
 }
 
 export function normalizeAdminUser(raw: RawAdminUser): AdminUser {
@@ -60,5 +62,7 @@ export function normalizeAdminUser(raw: RawAdminUser): AdminUser {
     phone: raw.phone ?? "",
     role: normalizeRole(raw.role),
     status: normalizeStatus(raw.status),
+    currentWorkload: raw.current_workload ?? null,
+    maxWorkload: raw.max_workload ?? null,
   }
 }

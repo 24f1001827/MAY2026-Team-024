@@ -27,6 +27,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/shadcn/dropdown-menu"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/shadcn/dialog"
+import { Label } from "@/components/shadcn/label"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -42,7 +51,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table"
 import { Pagination } from "@/features/common/components/pagination"
-import { useUpdateUserStatus } from "@/hooks/admin-users"
+import { useUpdateMaxWorkload, useUpdateUserStatus } from "@/hooks/admin-users"
 import { toast } from "@/lib/styles/toast-styles"
 import { cn } from "@/lib/utils"
 import { getRoleMeta, getStatusMeta, ROLE_META } from "@/lib/utils/user/display"
@@ -129,6 +138,11 @@ export function UsersTable({
   const [statusFilter, setStatusFilter] = useState<UserStatus | "all">("all")
   const [page, setPage] = useState(1)
   const updateStatus = useUpdateUserStatus()
+  const updateMaxWorkload = useUpdateMaxWorkload()
+
+  // "Set max workload" dialog state (officers only).
+  const [workloadTarget, setWorkloadTarget] = useState<AdminUser | null>(null)
+  const [workloadValue, setWorkloadValue] = useState("")
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -159,6 +173,50 @@ export function UsersTable({
           }),
         onError: (err) =>
           toast.error("Couldn't update user", {
+            description:
+              err instanceof Error ? err.message : "Please try again.",
+          }),
+      },
+    )
+  }
+
+  function openWorkload(user: AdminUser) {
+    setWorkloadTarget(user)
+    setWorkloadValue(String(user.maxWorkload ?? ""))
+  }
+
+  function submitWorkload(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!workloadTarget) return
+
+    const value = Number(workloadValue)
+    if (!Number.isInteger(value) || value < 1) {
+      toast.error("Invalid capacity", {
+        description: "Max workload must be a whole number of 1 or more.",
+      })
+      return
+    }
+    if (
+      workloadTarget.currentWorkload !== null &&
+      value < workloadTarget.currentWorkload
+    ) {
+      toast.error("Capacity too low", {
+        description: `Cannot set below the current workload (${workloadTarget.currentWorkload}).`,
+      })
+      return
+    }
+
+    updateMaxWorkload.mutate(
+      { id: workloadTarget.id, maxWorkload: value },
+      {
+        onSuccess: () => {
+          toast.success("Capacity updated", {
+            description: `${workloadTarget.name}'s max workload is now ${value}.`,
+          })
+          setWorkloadTarget(null)
+        },
+        onError: (err) =>
+          toast.error("Couldn't update capacity", {
             description:
               err instanceof Error ? err.message : "Please try again.",
           }),
@@ -289,7 +347,7 @@ export function UsersTable({
                       <StatusBadge status={user.status} />
                     </TableCell>
                     <TableCell className="text-right">
-                      {transitions.length === 0 ? (
+                      {transitions.length === 0 && user.role !== "Officer" ? (
                         <span className="text-xs text-muted-foreground">—</span>
                       ) : (
                         <DropdownMenu>
@@ -305,22 +363,46 @@ export function UsersTable({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Change status</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {transitions.map((t) => (
-                              <DropdownMenuItem
-                                key={t.next}
-                                className={cn(
-                                  t.destructive &&
-                                    "text-destructive focus:bg-destructive/10 focus:text-destructive",
+                            {transitions.length > 0 && (
+                              <>
+                                <DropdownMenuLabel>
+                                  Change status
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {transitions.map((t) => (
+                                  <DropdownMenuItem
+                                    key={t.next}
+                                    className={cn(
+                                      t.destructive &&
+                                        "text-destructive focus:bg-destructive/10 focus:text-destructive",
+                                    )}
+                                    onSelect={() =>
+                                      changeStatus(user, t.next, t.label)
+                                    }
+                                  >
+                                    {t.label}
+                                  </DropdownMenuItem>
+                                ))}
+                              </>
+                            )}
+                            {user.role === "Officer" && (
+                              <>
+                                {transitions.length > 0 && (
+                                  <DropdownMenuSeparator />
                                 )}
-                                onSelect={() =>
-                                  changeStatus(user, t.next, t.label)
-                                }
-                              >
-                                {t.label}
-                              </DropdownMenuItem>
-                            ))}
+                                <DropdownMenuItem
+                                  onSelect={() => openWorkload(user)}
+                                >
+                                  Set max workload
+                                  {user.maxWorkload !== null && (
+                                    <span className="ml-auto text-xs text-muted-foreground">
+                                      {user.currentWorkload ?? 0}/
+                                      {user.maxWorkload}
+                                    </span>
+                                  )}
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
@@ -342,6 +424,56 @@ export function UsersTable({
           />
         </div>
       )}
+
+      <Dialog
+        open={workloadTarget !== null}
+        onOpenChange={(open) => !open && setWorkloadTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set max workload</DialogTitle>
+            <DialogDescription>
+              {workloadTarget
+                ? `Capacity for ${workloadTarget.name}. Currently handling ${
+                    workloadTarget.currentWorkload ?? 0
+                  } case(s).`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={submitWorkload} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="maxWorkload">Maximum concurrent cases</Label>
+              <Input
+                id="maxWorkload"
+                type="number"
+                min={workloadTarget?.currentWorkload ?? 1}
+                step={1}
+                value={workloadValue}
+                onChange={(e) => setWorkloadValue(e.target.value)}
+                placeholder="e.g. 10"
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setWorkloadTarget(null)}
+                disabled={updateMaxWorkload.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="brand"
+                disabled={updateMaxWorkload.isPending}
+              >
+                {updateMaxWorkload.isPending ? "Saving…" : "Save"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
