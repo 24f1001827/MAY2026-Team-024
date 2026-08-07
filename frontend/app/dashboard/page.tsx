@@ -1,13 +1,20 @@
-import { redirect } from "next/navigation"
-
+import { AdminDashboard } from "@/features/admin/components/admin-dashboard"
 import { getCurrentUser } from "@/lib/auth/current-user"
-import { routes } from "@/nav"
 
 export default async function DashboardPage() {
   const currentUser = await getCurrentUser()
 
-  // Officers work out of their department dashboard, not the generic home.
-  if (currentUser?.role === "Officer") redirect(routes.department)
+  // NOTE: officers are intentionally NOT redirected to /dashboard/department
+  // yet. That page still resolves the officer's department from mock data, so a
+  // real (backend-authenticated) officer isn't found there and it bounces back
+  // here — an infinite redirect loop. Restore this redirect once the officers
+  // module is integrated:
+  //   if (currentUser?.role === "Officer") redirect(routes.department)
+
+  // Admins get the user-management console as their home.
+  if (currentUser?.role === "Admin") {
+    return <AdminDashboard name={currentUser.name} />
+  }
 
   const firstName = currentUser?.name.split(" ")[0] ?? "there"
 
