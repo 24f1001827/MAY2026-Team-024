@@ -82,8 +82,9 @@ class ComplaintSchema(Schema):
     @validates_schema
     def validate_department_reference(self, data, **kwargs):
         """
-        Require exactly one way to identify the department: department_id
-        (preferred) or department (name).
+        Require at least one way to identify the department: department_id or
+        department (name). Supplying both is allowed -- ComplaintService.
+        _resolve_department takes department_id and ignores the name.
         """
 
         if data.get("department_id") is None and not data.get("department"):
