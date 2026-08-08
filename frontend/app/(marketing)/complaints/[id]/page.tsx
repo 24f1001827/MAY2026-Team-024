@@ -4,8 +4,8 @@ import { notFound } from "next/navigation"
 import { ComplaintDetail } from "@/features/complaint/components/complaint-detail"
 import {
   ANONYMOUS_REPORTER,
-  getPublicComplaint,
 } from "@/lib/utils/complaint/public-complaints"
+import { fetchPublicComplaint } from "@/lib/api/public-complaints"
 
 export async function generateMetadata({
   params,
@@ -13,7 +13,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const data = getPublicComplaint(id)
+  const data = await fetchPublicComplaint(id)
   return {
     title: data ? data.complaint.title : "Complaint not found",
   }
@@ -25,7 +25,7 @@ export default async function PublicComplaintDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const data = getPublicComplaint(id)
+  const data = await fetchPublicComplaint(id)
   if (!data) notFound()
 
   return (
@@ -35,6 +35,7 @@ export default async function PublicComplaintDetailPage({
         citizenName={ANONYMOUS_REPORTER}
         departmentName={data.departmentName}
         initialRemarks={data.remarks}
+        images={data.images}
         readOnly
       />
     </div>
