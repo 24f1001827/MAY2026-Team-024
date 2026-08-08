@@ -8,6 +8,8 @@ from app.schemas import (
     ComplaintSchema,
     ComplaintResponseSchema,
     ComplaintDetailResponseSchema,
+    PublicComplaintSchema,
+    PublicComplaintDetailSchema,
     ReopenComplaintSchema,
 )
 from app.services import ComplaintService
@@ -18,6 +20,87 @@ complaint_bp = Blueprint(
     __name__,
     url_prefix="/api/v1/complaints",
 )
+
+public_complaint_list_schema = PublicComplaintSchema(many=True)
+public_complaint_detail_schema = PublicComplaintDetailSchema()
+
+
+@complaint_bp.get("/public")
+def get_public_complaints():
+    """
+    Public, unauthenticated list of complaints for the city map. Anonymized:
+    exposes no reporter or handling-officer identity.
+    """
+
+    try:
+        complaints = ComplaintService.get_public_complaints()
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Public complaints retrieved successfully.",
+                    "data": public_complaint_list_schema.dump(complaints),
+                }
+            ),
+            200,
+        )
+
+    except Exception as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
+
+@complaint_bp.get("/public/<uuid:complaint_id>")
+def get_public_complaint(complaint_id):
+    """
+    Public, unauthenticated single-complaint detail (anonymized).
+    """
+
+    try:
+        complaint = ComplaintService.get_public_complaint(complaint_id)
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Public complaint retrieved successfully.",
+                    "data": public_complaint_detail_schema.dump(complaint),
+                }
+            ),
+            200,
+        )
+
+    except ValueError as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            404,
+        )
+
+    except Exception as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
 
 
 @complaint_bp.post("")
