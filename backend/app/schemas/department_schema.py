@@ -31,12 +31,6 @@ class CreateDepartmentSchema(Schema):
         ),
     )
 
-    budget = fields.Decimal(
-        required=False,
-        places=2,
-        as_string=True,
-    )
-
     head_officer_id = fields.UUID(
         required=False,
         allow_none=True,
@@ -75,11 +69,6 @@ class UpdateDepartmentSchema(Schema):
         validate=validate.Length(
             max=500,
         ),
-    )
-
-    budget = fields.Decimal(
-        places=2,
-        as_string=True,
     )
 
     head_officer_id = fields.UUID(
@@ -132,15 +121,19 @@ class DepartmentResponseSchema(Schema):
         allow_none=True,
     )
 
-    budget = fields.Decimal(
-        places=2,
-        as_string=True,
-    )
+    # Current-financial-year budget summary, sourced from the year-wise budget
+    # module (not a legacy column): { financial_year, total, allocated, available }.
+    budget = fields.Method("get_budget")
 
     head_officer_id = fields.UUID(
         allow_none=True,
         dump_only=True,
     )
+
+    def get_budget(self, obj):
+        from app.services.admin_budget_service import department_budget_summary
+
+        return department_budget_summary(obj)
 
     # The head officer's display name, resolved via the `head_officer`
     # relationship. Null when no head is assigned.

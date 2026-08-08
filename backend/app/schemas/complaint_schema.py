@@ -230,6 +230,10 @@ class ComplaintResponseSchema(Schema):
 
     ai_priority_score = fields.Integer()
 
+    allocated_budget = fields.Decimal(as_string=True, allow_none=True)
+
+    budget_year = fields.String(allow_none=True)
+
     latitude = fields.Float()
 
     longitude = fields.Float()
@@ -329,10 +333,38 @@ class ComplaintDetailResponseSchema(ComplaintResponseSchema):
 
     remarks = fields.Method("get_remarks")
 
+    # The officer's review report (findings/decision), or null if not submitted.
+    review_report = fields.Nested(ComplaintReviewReportSchema, allow_none=True)
+
+    # One-to-one; null until an officer publishes a tender for this complaint.
+    tender = fields.Nested(ComplaintTenderSchema, allow_none=True)
+
     def get_remarks(self, obj):
         visible = [r for r in obj.remarks if not r.is_internal]
         visible.sort(key=lambda r: r.created_at)
         return ComplaintRemarkResponseSchema(many=True).dump(visible)
+
+
+class PublicComplaintSchema(ComplaintResponseSchema):
+    """
+    Anonymized complaint for the public map/list — strips every field that
+    could identify the reporter or the handling officer. Unauthenticated
+    surface, so this must never leak `citizen_id` / `assigned_officer_id`.
+    """
+
+    class Meta:
+        exclude = ("citizen_id", "assigned_officer_id")
+
+
+class PublicComplaintDetailSchema(ComplaintDetailResponseSchema):
+    """
+    Anonymized single-complaint detail (with images + public activity timeline).
+    Same privacy stripping as `PublicComplaintSchema`; the officer's review
+    report is staff/authenticated-only, so it's excluded here too.
+    """
+
+    class Meta:
+        exclude = ("citizen_id", "assigned_officer_id", "review_report")
 
 
 class AssignComplaintSchema(Schema):

@@ -337,8 +337,10 @@ def allocate_budget(complaint_id):
                     "message": "Budget allocated successfully.",
                     "data": {
                         "complaint_id": complaint.id,
-                        "department_budget": str(
-                            complaint.department.budget
+                        "allocated_budget": (
+                            str(complaint.allocated_budget)
+                            if complaint.allocated_budget is not None
+                            else None
                         ),
                         "status": complaint.status.value,
                     },
