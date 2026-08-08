@@ -16,6 +16,7 @@ from app.extensions import db
 from datetime import datetime
 from app.utils import upload_document
 from app.services.notification_service import NotificationService
+from app.services.activity_service import ActivityService
 
 
 class AgencyService:
@@ -223,7 +224,16 @@ class AgencyService:
             )
             complaint = work_order.tender.complaint
 
+            _prev = complaint.status
             complaint.status = ComplaintStatus.WORK_IN_PROGRESS
+
+            ActivityService.record(
+                complaint.id,
+                "Work started by the agency.",
+                user_id=user_id,
+                status_from=_prev,
+                status_to=ComplaintStatus.WORK_IN_PROGRESS,
+            )
 
         elif (
             work_order.status == WorkOrderStatus.IN_PROGRESS or work_order.status == WorkOrderStatus.INCOMPLETE
@@ -241,7 +251,17 @@ class AgencyService:
             work_order.end_date = datetime.now(IST).date()
             work_order.completion_proof_url = proof_url["document_url"]
 
-            work_order.tender.complaint.status = ComplaintStatus.WORK_COMPLETED
+            _complaint = work_order.tender.complaint
+            _prev = _complaint.status
+            _complaint.status = ComplaintStatus.WORK_COMPLETED
+
+            ActivityService.record(
+                _complaint.id,
+                "Work marked completed by the agency (awaiting verification).",
+                user_id=user_id,
+                status_from=_prev,
+                status_to=ComplaintStatus.WORK_COMPLETED,
+            )
             NotificationService.create_notification(
                 {
                     "user_id": work_order.assigned_by,
