@@ -5,7 +5,7 @@
  * Run `bun routes:generate` to regenerate from the filesystem.
  *
  * Source: app/dashboard (scanned recursively)
- * Generated: 2026-08-02
+ * Generated: 2026-08-08
  */
 
 import type { RouteNode } from '../types';
@@ -59,6 +59,24 @@ export const ROUTE_TREE: RouteNode = {
     isDynamic: false,
     isCatchAll: false,
     children: [],
+  },
+  {
+    id: 'budgets',
+    segment: 'budgets',
+    path: '/dashboard/budgets',
+    isDynamic: false,
+    isCatchAll: false,
+    children: [
+      {
+        id: 'budgets-[id]',
+        segment: '[id]',
+        path: '/dashboard/budgets/[id]',
+        isDynamic: true,
+        isCatchAll: false,
+        paramName: 'id',
+        children: [],
+      },
+    ],
   },
   {
     id: 'complaints',
@@ -190,6 +208,14 @@ export const ROUTE_TREE: RouteNode = {
     children: [],
   },
   {
+    id: 'proposals',
+    segment: 'proposals',
+    path: '/dashboard/proposals',
+    isDynamic: false,
+    isCatchAll: false,
+    children: [],
+  },
+  {
     id: 'rejected',
     segment: 'rejected',
     path: '/dashboard/rejected',
@@ -213,30 +239,31 @@ export const ROUTE_TREE: RouteNode = {
     isCatchAll: false,
     children: [
       {
-        id: 'tenders-create',
-        segment: 'create',
-        path: '/dashboard/tenders/create',
-        isDynamic: false,
-        isCatchAll: false,
-        children: [],
-      },
-      {
         id: 'tenders-[id]',
         segment: '[id]',
         path: '/dashboard/tenders/[id]',
         isDynamic: true,
         isCatchAll: false,
         paramName: 'id',
-        children: [
-            {
-              id: 'tenders-[id]-edit',
-              segment: 'edit',
-              path: '/dashboard/tenders/[id]/edit',
-              isDynamic: false,
-              isCatchAll: false,
-              children: [],
-            },
-          ],
+        children: [],
+      },
+    ],
+  },
+  {
+    id: 'work-orders',
+    segment: 'work-orders',
+    path: '/dashboard/work-orders',
+    isDynamic: false,
+    isCatchAll: false,
+    children: [
+      {
+        id: 'work-orders-[id]',
+        segment: '[id]',
+        path: '/dashboard/work-orders/[id]',
+        isDynamic: true,
+        isCatchAll: false,
+        paramName: 'id',
+        children: [],
       },
     ],
   },
