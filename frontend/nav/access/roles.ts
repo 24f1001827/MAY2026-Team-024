@@ -75,3 +75,11 @@ export const STAFF_ONLY: AccessConfig = {
 export const TENDER_ACCESS: AccessConfig = {
   allowRoles: ["admin", "officer", "agency"],
 } as const
+
+/** Agency-only — the contractor portal (my proposals, work orders). */
+export const AGENCY_ONLY: AccessConfig = { allowRoles: ["agency"] } as const
+
+/** Officers + agencies — the tenders list (officers oversee, agencies bid). */
+export const OFFICER_AGENCY_ACCESS: AccessConfig = {
+  allowRoles: ["officer", "agency"],
+} as const
