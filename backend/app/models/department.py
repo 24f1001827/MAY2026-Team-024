@@ -21,11 +21,6 @@ class Department(BaseModel):
          nullable=True
     )
 
-    budget=db.Column(
-        db.Numeric(12,2),
-        default=0
-    )
-
     # The officer who heads this department. Nullable — a department may have no
     # head assigned. FK to users.id (an officer is identified by their user id).
     head_officer_id=db.Column(
