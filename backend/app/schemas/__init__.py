@@ -9,6 +9,8 @@ from .complaint_schema import (
     ComplaintSchema,
     ComplaintResponseSchema,
     ComplaintDetailResponseSchema,
+    PublicComplaintSchema,
+    PublicComplaintDetailSchema,
     AssignComplaintSchema,
     ReopenComplaintSchema,
 )
