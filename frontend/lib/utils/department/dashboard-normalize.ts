@@ -10,6 +10,10 @@ import {
   normalizeComplaint,
   type RawComplaint,
 } from "@/lib/utils/complaint/normalize"
+import {
+  normalizeDepartmentBudget,
+  type RawDepartmentBudget,
+} from "@/lib/utils/department/normalize"
 import type {
   DepartmentDashboardData,
   DepartmentDashboardOfficer,
@@ -32,7 +36,7 @@ export interface RawDashboardDepartment {
   id: number
   name: string
   description?: string | null
-  budget?: string | null
+  budget?: RawDepartmentBudget | null
   head_officer_id?: string | null
 }
 
@@ -72,7 +76,7 @@ export function normalizeDepartmentDashboard(
       id: d.id,
       name: d.name,
       description: d.description ?? "",
-      budget: d.budget != null ? Number(d.budget) : 0,
+      budget: normalizeDepartmentBudget(d.budget),
       headOfficerId,
       createdAt: "",
       updatedAt: "",

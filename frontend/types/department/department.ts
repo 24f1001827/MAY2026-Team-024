@@ -1,4 +1,15 @@
 /**
+ * The department's current-financial-year budget, sourced from the year-wise
+ * budget module. `available = total - allocated` (utilization).
+ */
+export interface DepartmentBudgetSummary {
+  financialYear: string
+  total: number
+  allocated: number
+  available: number
+}
+
+/**
  * `departments` entity — the civic departments that complaints are routed to
  * and that officers belong to. Mirrors the `departments` table in the diagram.
  */
@@ -6,7 +17,8 @@ export interface Department {
   id: number
   name: string
   description: string
-  budget: number
+  /** Current-FY budget summary from the budget module (null if none set). */
+  budget: DepartmentBudgetSummary | null
   /**
    * The department head — an officer (users.id) who triages the department's
    * complaint queue and allots cases to officers. `null` until an admin
