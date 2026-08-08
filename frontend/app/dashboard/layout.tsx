@@ -10,6 +10,7 @@ import { TooltipProvider } from "@/components/shadcn/tooltip"
 import { AppSidebar } from "@/features/dashboard/components/app-sidebar"
 import { Breadcrumbs } from "@/features/common/components/breadcrumbs"
 import { ThemeToggle } from "@/features/common/components/theme-toggle"
+import { NotificationBell } from "@/features/notification/components/notification-bell"
 import { requireUser } from "@/lib/auth/current-user"
 
 export default async function DashboardLayout({
@@ -38,6 +39,7 @@ export default async function DashboardLayout({
             <Separator orientation="vertical" className="mr-1 !h-5" />
             <Breadcrumbs />
             <div className="ml-auto flex items-center gap-2">
+              <NotificationBell />
               <ThemeToggle />
             </div>
           </header>
