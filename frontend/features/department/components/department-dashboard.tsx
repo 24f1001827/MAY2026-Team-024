@@ -748,8 +748,18 @@ export function DepartmentDashboard({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat
               icon={Wallet01Icon}
-              label="Annual Budget"
-              value={formatCurrency(department.budget)}
+              label={
+                department.budget
+                  ? `Budget · FY ${department.budget.financialYear}`
+                  : "Budget"
+              }
+              value={
+                department.budget
+                  ? `${formatCurrency(
+                      department.budget.allocated,
+                    )} / ${formatCurrency(department.budget.total)}`
+                  : "Not set"
+              }
             />
             <Stat
               icon={Megaphone01Icon}
