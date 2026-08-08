@@ -10,7 +10,10 @@ import type { MetadataRegistry } from "../types"
 import { rootMetadata } from "./root.meta"
 import { complaintsMetadata } from "./complaints.meta"
 import { tendersMetadata } from "./tenders.meta"
+import { proposalsMetadata } from "./proposals.meta"
+import { workOrdersMetadata } from "./work-orders.meta"
 import { agenciesMetadata } from "./agencies.meta"
+import { budgetsMetadata } from "./budgets.meta"
 import { departmentsMetadata } from "./departments.meta"
 import { officersMetadata } from "./officers.meta"
 import { userStatusMetadata } from "./user-status.meta"
@@ -50,7 +53,10 @@ export const metadataRegistry: MetadataRegistry = validateMetadataModules({
   root: rootMetadata,
   complaints: complaintsMetadata,
   tenders: tendersMetadata,
+  proposals: proposalsMetadata,
+  workOrders: workOrdersMetadata,
   agencies: agenciesMetadata,
+  budgets: budgetsMetadata,
   departments: departmentsMetadata,
   officers: officersMetadata,
   userStatus: userStatusMetadata,
