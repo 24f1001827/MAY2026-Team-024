@@ -18,8 +18,12 @@ from app.routes import (
     notification_bp,
     department_bp,
     admin_department_bp,
+    admin_agency_bp,
+    admin_budget_bp,
+    admin_tender_bp,
     settings_bp,
-    officers_bp
+    officers_bp,
+    stats_bp
 )
 
 from app.extensions import init_google_oauth, configure_cloudinary
@@ -69,6 +73,10 @@ def create_app():
     app.register_blueprint(notification_bp)
     app.register_blueprint(department_bp)
     app.register_blueprint(admin_department_bp)
+    app.register_blueprint(admin_agency_bp)
+    app.register_blueprint(admin_budget_bp)
+    app.register_blueprint(admin_tender_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(officers_bp)
+    app.register_blueprint(stats_bp)
     return app
