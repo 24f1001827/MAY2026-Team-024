@@ -7,14 +7,15 @@ import type { IconSvgElement } from "@hugeicons/react"
 import {
   Analytics01Icon,
   Building03Icon,
+  ClipboardIcon,
   Clock01Icon,
   FlagIcon,
   Location01Icon,
   PencilEdit02Icon,
   PlusSignIcon,
-  SentIcon,
   SparklesIcon,
   UserIcon,
+  Wallet01Icon,
 } from "@hugeicons/core-free-icons"
 
 import { Button } from "@/components/shadcn/button"
@@ -33,25 +34,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog"
-import { Textarea } from "@/components/shadcn/textarea"
-import { NativeSelect } from "@/components/shadcn/native-select"
 import { Label } from "@/components/shadcn/label"
+import { Textarea } from "@/components/shadcn/textarea"
 import { PageHeader } from "@/features/common/components/page-header"
+import { OfficerTenderSection } from "@/features/tender/components/officer-tender-section"
+import { ComplaintLifecycleActions } from "@/features/complaint/components/complaint-lifecycle-actions"
+import { useAddRemark } from "@/hooks/complaint"
+import { ApiError } from "@/lib/api/api-client"
 import { cn } from "@/lib/utils"
-import { toast } from "@/lib/styles/toast-styles"
 import { routes } from "@/nav"
+import { toast } from "@/lib/styles/toast-styles"
+import { formatCurrency } from "@/lib/utils/common/format"
 import {
   PRIORITY_META,
   formatShortDate,
   statusBadgeClass,
   statusLabel,
 } from "@/lib/utils/complaint/display"
-import {
-  COMPLAINT_STATUSES,
-  type Complaint,
-  type ComplaintRemark,
-  type ComplaintStatus,
-} from "@/types/complaint"
+import type { Complaint, ComplaintRemark } from "@/types/complaint"
+import type { ReviewReport } from "@/types/officer"
+import type { ComplaintTenderSummary } from "@/types/tender"
 import type { UserRole } from "@/types/user"
 
 function initialsOf(name: string): string {
@@ -71,6 +73,12 @@ type ComplaintDetailProps = {
   currentUserId?: string
   currentUserName?: string
   initialRemarks: ComplaintRemark[]
+  /** Uploaded complaint photo URLs, shown as a gallery. */
+  images?: string[]
+  /** The complaint's tender (officer view), or null if none published yet. */
+  tender?: ComplaintTenderSummary | null
+  /** The officer's review report, shown to everyone viewing the complaint. */
+  reviewReport?: ReviewReport | null
   /**
    * Public read-only view: forces off every edit/manage affordance regardless
    * of role. Pair with `citizenName="Anonymous"` on public surfaces.
@@ -84,64 +92,52 @@ export function ComplaintDetail({
   departmentName,
   currentRole,
   currentUserId,
-  currentUserName,
   initialRemarks,
+  images = [],
+  tender = null,
+  reviewReport = null,
   readOnly = false,
 }: ComplaintDetailProps) {
-  const [status, setStatus] = useState<ComplaintStatus>(complaint.status)
-  const [remarks, setRemarks] = useState<ComplaintRemark[]>(initialRemarks)
-  const [nextStatus, setNextStatus] = useState<ComplaintStatus>(complaint.status)
-  const [message, setMessage] = useState("")
-  const [postOpen, setPostOpen] = useState(false)
-
   // Only the citizen owner edits the whole complaint; admins oversee (no
-  // create/edit). Admins, officers, and agencies can post activity (remarks +
-  // status moves). A read-only (public) view disables both regardless of role.
+  // create/edit). A read-only (public) view disables it regardless of role.
   const canEdit = !readOnly && currentRole === "Citizen"
-  const canManage =
-    !readOnly &&
-    (currentRole === "Admin" ||
-      currentRole === "Officer" ||
-      currentRole === "Agency")
+
+  // Officers and admins can add remarks to the timeline.
+  const canAddRemark =
+    !readOnly && (currentRole === "Officer" || currentRole === "Admin")
+
+  // The status + activity timeline are authoritative from the backend; lifecycle
+  // transitions happen through `ComplaintLifecycleActions` (which refetches).
+  const status = complaint.status
+
+  const [remarkOpen, setRemarkOpen] = useState(false)
+  const [remarkMessage, setRemarkMessage] = useState("")
+  const addRemark = useAddRemark()
 
   // Newest first, regardless of the source ordering.
-  const activity = [...remarks].sort((a, b) =>
+  const activity = [...initialRemarks].sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt)
   )
 
-  function handlePostUpdate(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const statusChanged = nextStatus !== status
-    const trimmed = message.trim()
-
-    if (!trimmed && !statusChanged) {
-      toast.error("Nothing to post", {
-        description: "Add a remark or change the status.",
-      })
+  async function handleAddRemark(e: React.FormEvent) {
+    e.preventDefault()
+    if (remarkMessage.trim().length < 2) {
+      toast.error("Enter a remark.")
       return
     }
-
-    const remark: ComplaintRemark = {
-      id: crypto.randomUUID(),
-      complaintId: complaint.id,
-      authorId: currentUserId ?? "",
-      authorName: currentUserName ?? "Unknown",
-      authorRole: currentRole ?? "Citizen",
-      message: trimmed || `Status moved to ${statusLabel(nextStatus)}.`,
-      statusFrom: statusChanged ? status : null,
-      statusTo: statusChanged ? nextStatus : null,
-      createdAt: new Date().toISOString(),
+    try {
+      await addRemark.mutateAsync({
+        id: complaint.id,
+        message: remarkMessage.trim(),
+      })
+      toast.success("Activity added.")
+      setRemarkMessage("")
+      setRemarkOpen(false)
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Couldn’t add the remark.",
+      )
     }
-
-    setRemarks((prev) => [remark, ...prev])
-    if (statusChanged) setStatus(nextStatus)
-    setMessage("")
-    setPostOpen(false)
-    toast.success(statusChanged ? "Status updated" : "Activity posted", {
-      description: statusChanged
-        ? `Complaint moved to ${statusLabel(nextStatus)}.`
-        : "Your remark has been added to the history.",
-    })
   }
 
   return (
@@ -220,9 +216,88 @@ export function ComplaintDetail({
                     <span className="text-muted-foreground">Not scored</span>
                   )}
                 </DetailRow>
+                {complaint.allocatedBudget != null && (
+                  <DetailRow icon={Wallet01Icon} label="Allocated budget">
+                    {formatCurrency(complaint.allocatedBudget)}
+                    {complaint.budgetYear && (
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · FY {complaint.budgetYear}
+                      </span>
+                    )}
+                  </DetailRow>
+                )}
               </dl>
             </CardContent>
           </Card>
+
+          {/* Officer's review report — visible to anyone viewing the complaint. */}
+          {reviewReport && (
+            <Card className="[--card-spacing:--spacing(6)]">
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold">
+                  Review report
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm leading-relaxed text-foreground">
+                  {reviewReport.findings}
+                </p>
+                <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                  <DetailRow icon={ClipboardIcon} label="Decision">
+                    {reviewReport.decision}
+                  </DetailRow>
+                  <DetailRow icon={Clock01Icon} label="Reviewed">
+                    {reviewReport.reviewDate
+                      ? formatShortDate(reviewReport.reviewDate)
+                      : "—"}
+                  </DetailRow>
+                  {reviewReport.estimatedCost != null && (
+                    <DetailRow icon={Wallet01Icon} label="Estimated cost">
+                      {formatCurrency(reviewReport.estimatedCost)}
+                    </DetailRow>
+                  )}
+                  {reviewReport.estimatedDurationDays != null && (
+                    <DetailRow icon={Clock01Icon} label="Estimated duration">
+                      {reviewReport.estimatedDurationDays} days
+                    </DetailRow>
+                  )}
+                </dl>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Uploaded photos */}
+          {images.length > 0 && (
+            <Card className="[--card-spacing:--spacing(6)]">
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold">
+                  Photos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {images.map((src, i) => (
+                    <a
+                      key={src}
+                      href={src}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative block aspect-square overflow-hidden rounded-xl border border-border bg-muted"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={src}
+                        alt={`Complaint photo ${i + 1}`}
+                        loading="lazy"
+                        className="size-full object-cover transition-transform group-hover:scale-105"
+                      />
+                    </a>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Activity history */}
           <Card className="[--card-spacing:--spacing(6)]">
@@ -230,16 +305,16 @@ export function ComplaintDetail({
               <CardTitle className="text-sm font-semibold">
                 Activity History
               </CardTitle>
-              {canManage && (
+              {canAddRemark && (
                 <CardAction>
                   <Button
                     type="button"
                     size="sm"
-                    variant="brand"
-                    onClick={() => setPostOpen(true)}
+                    variant="outline"
+                    onClick={() => setRemarkOpen(true)}
                   >
                     <HugeiconsIcon icon={PlusSignIcon} />
-                    New activity
+                    Add activity
                   </Button>
                 </CardAction>
               )}
@@ -300,6 +375,14 @@ export function ComplaintDetail({
 
         {/* Sidebar */}
         <div className="space-y-6 lg:col-span-1">
+          {/* Role- and status-gated lifecycle actions (renders nothing when
+              the current user has no applicable action). */}
+          <ComplaintLifecycleActions
+            complaint={complaint}
+            currentRole={currentRole}
+            currentUserId={currentUserId}
+          />
+
           <InfoCard icon={Location01Icon} title="Location">
             <p className="text-sm leading-relaxed text-foreground">
               {complaint.address}
@@ -332,56 +415,57 @@ export function ComplaintDetail({
               </p>
             )}
           </InfoCard>
+
+          {/* Tender workflow — officers publish a tender and review proposals. */}
+          {!readOnly && currentRole === "Officer" && (
+            <OfficerTenderSection
+              complaintId={complaint.id}
+              complaintTitle={complaint.title}
+              complaintStatus={complaint.status}
+              tender={tender}
+            />
+          )}
         </div>
       </div>
 
-      {/* Post-activity dialog */}
-      <Dialog open={postOpen} onOpenChange={setPostOpen}>
+      {/* Add-activity (remark) dialog — officers and admins. */}
+      <Dialog
+        open={remarkOpen}
+        onOpenChange={(open) => {
+          if (!open) setRemarkMessage("")
+          setRemarkOpen(open)
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Post activity</DialogTitle>
+            <DialogTitle>Add activity</DialogTitle>
             <DialogDescription>
-              Add a remark and/or move this complaint&apos;s status.
+              Add a remark to this complaint’s activity timeline.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handlePostUpdate} className="space-y-4">
+          <form onSubmit={handleAddRemark} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="nextStatus">Status</Label>
-              <NativeSelect
-                id="nextStatus"
-                value={nextStatus}
-                onChange={(e) =>
-                  setNextStatus(e.target.value as ComplaintStatus)
-                }
-              >
-                {COMPLAINT_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {statusLabel(s)}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="remark">Remark</Label>
+              <Label htmlFor="activityMsg">Remark</Label>
               <Textarea
-                id="remark"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                id="activityMsg"
+                value={remarkMessage}
+                onChange={(e) => setRemarkMessage(e.target.value)}
                 rows={3}
                 placeholder="Add a note about this complaint…"
+                required
               />
             </div>
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setPostOpen(false)}
+                onClick={() => setRemarkOpen(false)}
+                disabled={addRemark.isPending}
               >
                 Cancel
               </Button>
-              <Button type="submit" variant="brand">
-                <HugeiconsIcon icon={SentIcon} />
-                Post activity
+              <Button type="submit" variant="brand" disabled={addRemark.isPending}>
+                {addRemark.isPending ? "Adding…" : "Add activity"}
               </Button>
             </DialogFooter>
           </form>
