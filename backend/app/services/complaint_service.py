@@ -228,6 +228,50 @@ class ComplaintService:
         return complaints
 
     @staticmethod
+    def add_remark(complaint_id, message):
+        """
+        Add a remark to a complaint's activity timeline, attributed to the
+        current user (officer or admin).
+        """
+
+        user_id = get_jwt_identity()
+
+        complaint = ComplaintRepository.get_by_id(complaint_id)
+
+        if not complaint:
+            raise ValueError("Complaint not found.")
+
+        ActivityService.record(complaint_id, message, user_id=user_id)
+
+        db.session.commit()
+
+        return complaint
+
+    @staticmethod
+    def get_public_complaints():
+        """
+        All complaints for the public (anonymized) map/list. No auth.
+        """
+
+        return ComplaintRepository.get_all()
+
+    @staticmethod
+    def get_public_complaint(complaint_id):
+        """
+        A single complaint for the public (anonymized) detail. No auth.
+
+        Raises:
+            ValueError: if the complaint doesn't exist.
+        """
+
+        complaint = ComplaintRepository.get_by_id(complaint_id)
+
+        if not complaint:
+            raise ValueError("Complaint not found.")
+
+        return complaint
+
+    @staticmethod
     def get_complaint_by_id(complaint_id):
         """
         Retrieve a complaint by its ID.

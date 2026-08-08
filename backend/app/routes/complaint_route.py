@@ -577,3 +577,52 @@ def close_complaint(
             ),
             500,
         )
+
+
+@complaint_bp.post("/<uuid:complaint_id>/remark")
+@jwt_required()
+@role_required(UserRole.OFFICER, UserRole.ADMIN)
+def add_remark(complaint_id):
+    """
+    Add a remark to a complaint's activity timeline (officer or admin).
+    """
+
+    try:
+        body = request.get_json() or {}
+        message = (body.get("message") or "").strip()
+
+        if not message:
+            return (
+                jsonify({"success": False, "message": "Message is required."}),
+                400,
+            )
+
+        ComplaintService.add_remark(complaint_id, message)
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Remark added successfully.",
+                }
+            ),
+            201,
+        )
+
+    except ValueError as err:
+        return (
+            jsonify({"success": False, "message": str(err)}),
+            404,
+        )
+
+    except Exception as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )

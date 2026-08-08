@@ -687,6 +687,19 @@ class OfficerService:
             tender = proposal.tender
             tender.status = TenderStatus.AWARDED
 
+        elif new_status == ProposalStatus.SHORTLISTED:
+            ActivityService.record(
+                proposal.tender.complaint_id,
+                "A proposal was shortlisted.",
+                user_id=user_id,
+            )
+
+        elif new_status == ProposalStatus.REJECTED:
+            ActivityService.record(
+                proposal.tender.complaint_id,
+                "A proposal was rejected.",
+                user_id=user_id,
+            )
 
         proposal.status = new_status
 
@@ -767,6 +780,12 @@ class OfficerService:
         )
         # tender.complaint.status=ComplaintStatus.WORK_IN_PROGRESS
         # tender.status=TenderStatus.CLOSED
+
+        ActivityService.record(
+            proposal.tender.complaint_id,
+            "Work order awarded to the agency.",
+            user_id=user_id,
+        )
 
         db.session.commit()
         NotificationService.create_notification(
