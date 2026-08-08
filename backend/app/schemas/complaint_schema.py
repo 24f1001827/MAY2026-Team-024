@@ -8,8 +8,14 @@ from marshmallow import (
     validates_schema,
     validate,
 )
+from marshmallow_enum import EnumField
 
-from app.models.enums import AssignmentStatus
+from app.models.enums import (
+    AssignmentStatus,
+    TenderStatus,
+    WorkOrderStatus,
+    ReviewDecision,
+)
 
 
 class ComplaintSchema(Schema):
@@ -322,6 +328,61 @@ class ComplaintRemarkResponseSchema(Schema):
 
     def get_author_role(self, obj):
         return obj.user.role.value if obj.user else None
+
+
+class ComplaintWorkOrderSchema(Schema):
+    """
+    Compact work-order summary embedded under a complaint's tender, so the
+    reviewing officer can verify / mark-incomplete the awarded work without a
+    separate lookup (there is no officer GET-work-order endpoint).
+    """
+
+    id = fields.Integer()
+
+    status = EnumField(WorkOrderStatus, by_value=True)
+
+    scope_of_work = fields.String()
+
+    completion_proof_url = fields.String(allow_none=True)
+
+
+class ComplaintTenderSchema(Schema):
+    """
+    Compact tender summary embedded in a complaint's detail response, so staff
+    can see whether a complaint already has a tender (and jump to its proposals)
+    without a separate lookup. Full tender details live on the tender endpoints.
+    """
+
+    id = fields.Integer()
+
+    title = fields.String()
+
+    status = EnumField(TenderStatus, by_value=True)
+
+    estimated_cost = fields.Decimal(as_string=True)
+
+    closing_date = fields.DateTime()
+
+    # One-to-one; null until an officer awards a work order from a proposal.
+    work_order = fields.Nested(ComplaintWorkOrderSchema, allow_none=True)
+
+
+class ComplaintReviewReportSchema(Schema):
+    """
+    The officer's inspection report, embedded in a complaint's detail so any
+    viewer of the complaint can see the assessment. (Defined locally rather than
+    reusing officer_schema's version to avoid a circular import.)
+    """
+
+    findings = fields.String()
+
+    estimated_cost = fields.Decimal(as_string=True, allow_none=True)
+
+    estimated_duration_days = fields.Integer(allow_none=True)
+
+    decision = EnumField(ReviewDecision, by_value=True)
+
+    review_date = fields.DateTime()
 
 
 class ComplaintDetailResponseSchema(ComplaintResponseSchema):

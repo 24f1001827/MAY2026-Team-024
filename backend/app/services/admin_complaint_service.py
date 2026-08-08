@@ -16,7 +16,7 @@ from app.repositories import (
     OfficerRepository,
     ComplaintAssignmentRepository,
     ComplaintRepository,
-    
+    ReviewReportRepository,
 )
 
 from app.services.notification_service import NotificationService
@@ -50,7 +50,20 @@ class AdminComplaintService:
 
         return complaints
 
-   
+    @staticmethod
+    def get_review_report(complaint_id):
+        """
+        The officer's review report for a complaint, or None if not submitted.
+        Raises if the complaint doesn't exist.
+        """
+
+        complaint = ComplaintRepository.get_by_id(complaint_id)
+
+        if complaint is None:
+            raise ValueError("Complaint not found.")
+
+        return ReviewReportRepository.get_by_complaint_id(complaint_id)
+
     @staticmethod
     def assign_complaint(complaint_id, data):
         """

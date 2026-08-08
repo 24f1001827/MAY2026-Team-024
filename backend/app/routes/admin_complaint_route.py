@@ -7,6 +7,7 @@ from app.schemas import (
     ComplaintResponseSchema,
     ComplaintDetailResponseSchema,
     AssignComplaintSchema,
+    ReviewReportResponseSchema,
 )
 from app.services import AdminComplaintService,AdminBudgetService
 from marshmallow import ValidationError
@@ -21,6 +22,7 @@ admin_complaint_bp = Blueprint(
 )
 
 allocate_budget_schema = AllocateBudgetSchema()
+review_report_response_schema = ReviewReportResponseSchema()
 
 @admin_complaint_bp.get("")
 @jwt_required()
@@ -386,3 +388,51 @@ def allocate_budget(complaint_id):
             ),
             500,
         )
+
+@admin_complaint_bp.get("/<uuid:complaint_id>/review-report")
+@jwt_required()
+@role_required(UserRole.ADMIN)
+def get_review_report(complaint_id):
+    """
+    The officer's review report for a complaint (or null if not submitted).
+    """
+
+    try:
+        report = AdminComplaintService.get_review_report(complaint_id)
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Review report retrieved successfully.",
+                    "data": (
+                        review_report_response_schema.dump(report)
+                        if report is not None
+                        else None
+                    ),
+                }
+            ),
+            200,
+        )
+
+    except ValueError as err:
+        return (
+            jsonify({"success": False, "message": str(err)}),
+            404,
+        )
+
+    except Exception as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
+
+# Adding remarks is a shared staff action — see POST /complaints/{id}/remark
+# (officer + admin) in complaint_route.py.

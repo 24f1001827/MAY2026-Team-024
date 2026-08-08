@@ -236,6 +236,34 @@ class TenderResponseSchema(Schema):
         by_value=True,
     )
 
+class OfficerTenderListSchema(Schema):
+    """
+    A tender row for an officer's oversight list — includes the linked complaint
+    title so the officer can jump to it (management lives on the complaint).
+    """
+
+    id = fields.Integer()
+
+    complaint_id = fields.UUID()
+
+    complaint_title = fields.String(attribute="complaint.title")
+
+    title = fields.String()
+
+    status = EnumField(TenderStatus, by_value=True)
+
+    estimated_cost = fields.Decimal(as_string=True)
+
+    closing_date = fields.DateTime()
+
+    created_at = fields.DateTime()
+
+
+def _agency_name(obj):
+    """Agency's display name via agency → user, tolerant of missing relations."""
+    return obj.agency.user.name if obj.agency and obj.agency.user else None
+
+
 class OfficerProposalListSchema(Schema):
 
     proposal_id = fields.Integer(
@@ -267,6 +295,9 @@ class OfficerProposalListSchema(Schema):
 
     created_at = fields.DateTime()
 
+    def get_agency_name(self, obj):
+        return _agency_name(obj)
+
 class OfficerProposalDetailSchema(Schema):
 
     proposal_id = fields.Integer(
@@ -276,6 +307,13 @@ class OfficerProposalDetailSchema(Schema):
     tender_id = fields.Integer()
 
     agency_id = fields.UUID()
+
+    agency_name = fields.Method("get_agency_name")
+
+    contact_person = fields.String(
+        attribute="agency.contact_person",
+        allow_none=True,
+    )
 
     proposal_amount = fields.Decimal(
         as_string=True,
@@ -293,6 +331,9 @@ class OfficerProposalDetailSchema(Schema):
     created_at = fields.DateTime()
 
     updated_at = fields.DateTime()
+
+    def get_agency_name(self, obj):
+        return _agency_name(obj)
 
 class UpdateProposalStatusSchema(Schema):
 
