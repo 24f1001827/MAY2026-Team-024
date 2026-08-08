@@ -46,7 +46,7 @@ export function ComplaintDetailView({
     )
   }
 
-  const { complaint, remarks } = data
+  const { complaint, remarks, tender, images, reviewReport } = data
 
   const departmentName =
     departments?.find((d) => d.id === complaint.departmentId)?.name ??
@@ -64,6 +64,9 @@ export function ComplaintDetailView({
       currentUserId={currentUserId}
       currentUserName={currentUserName}
       initialRemarks={remarks}
+      images={images}
+      tender={tender}
+      reviewReport={reviewReport}
     />
   )
 }
