@@ -13,6 +13,9 @@ import type {
   ComplaintRemark,
   ComplaintStatus,
 } from "@/types/complaint"
+import type { WorkOrderStatus } from "@/types/agency"
+import type { ReviewDecision, ReviewReport } from "@/types/officer"
+import type { ComplaintTenderSummary, TenderStatus } from "@/types/tender"
 import { normalizeRole } from "@/lib/utils/user/normalize"
 
 /** A complaint image as the backend serializes it. */
@@ -32,6 +35,24 @@ export interface RawComplaintRemark {
   status_from?: string | null
   status_to?: string | null
   created_at?: string | null
+}
+
+/** A work-order summary embedded under a complaint's tender (detail only). */
+export interface RawComplaintWorkOrder {
+  id: number
+  status: string
+  scope_of_work?: string | null
+  completion_proof_url?: string | null
+}
+
+/** A tender summary embedded in a complaint detail (detail endpoint only). */
+export interface RawComplaintTender {
+  id: number
+  title: string
+  status: string
+  estimated_cost?: string | number | null
+  closing_date?: string | null
+  work_order?: RawComplaintWorkOrder | null
 }
 
 /** A complaint row exactly as the backend serializes it. */
@@ -58,8 +79,21 @@ export interface RawComplaint {
   pincode: string
   created_at?: string | null
   updated_at?: string | null
+  allocated_budget?: string | number | null
+  budget_year?: string | null
   images?: RawComplaintImage[] | null
   remarks?: RawComplaintRemark[] | null
+  tender?: RawComplaintTender | null
+  review_report?: RawComplaintReviewReport | null
+}
+
+/** The officer's review report embedded in a complaint detail. */
+export interface RawComplaintReviewReport {
+  findings: string
+  estimated_cost?: string | number | null
+  estimated_duration_days?: number | null
+  decision: string
+  review_date?: string | null
 }
 
 function toNumberOrNull(v: number | string | null | undefined): number | null {
@@ -91,6 +125,8 @@ export function normalizeComplaint(raw: RawComplaint): Complaint {
     pincode: raw.pincode,
     aiCategory: raw.ai_category ?? null,
     aiPriorityScore: raw.ai_priority_score ?? null,
+    allocatedBudget: toNumberOrNull(raw.allocated_budget),
+    budgetYear: raw.budget_year ?? null,
     createdAt: raw.created_at ?? "",
     updatedAt: raw.updated_at ?? "",
   }
@@ -123,4 +159,44 @@ export function normalizeComplaintRemarks(
   raw: RawComplaint,
 ): ComplaintRemark[] {
   return (raw.remarks ?? []).map(normalizeComplaintRemark)
+}
+
+/** The complaint's review report (detail endpoint), or null if not submitted. */
+export function normalizeComplaintReviewReport(
+  raw: RawComplaint,
+): ReviewReport | null {
+  const r = raw.review_report
+  if (!r) return null
+  return {
+    complaintId: raw.id,
+    findings: r.findings,
+    estimatedCost: r.estimated_cost != null ? Number(r.estimated_cost) : null,
+    estimatedDurationDays: r.estimated_duration_days ?? null,
+    decision: r.decision as ReviewDecision,
+    reviewDate: r.review_date ?? "",
+  }
+}
+
+/** The complaint's tender summary (detail endpoint), or null if none yet. */
+export function normalizeComplaintTender(
+  raw: RawComplaint,
+): ComplaintTenderSummary | null {
+  const t = raw.tender
+  if (!t) return null
+  const wo = t.work_order
+  return {
+    id: t.id,
+    title: t.title,
+    status: t.status as TenderStatus,
+    estimatedCost: Number(t.estimated_cost ?? 0),
+    closingDate: t.closing_date ?? "",
+    workOrder: wo
+      ? {
+          id: wo.id,
+          status: wo.status as WorkOrderStatus,
+          scopeOfWork: wo.scope_of_work ?? "",
+          completionProofUrl: wo.completion_proof_url ?? null,
+        }
+      : null,
+  }
 }
