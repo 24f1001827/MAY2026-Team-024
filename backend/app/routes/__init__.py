@@ -7,5 +7,9 @@ from .agency_route import agency_bp
 from .notification_route import notification_bp
 from .department_route import department_bp
 from .admin_department_route import admin_department_bp
+from .admin_agency_route import admin_agency_bp
+from .admin_budget_route import admin_budget_bp
+from .admin_tender_route import admin_tender_bp
 from .settings_route import settings_bp
 from .officers_directory_route import officers_bp
+from .stats_route import stats_bp
