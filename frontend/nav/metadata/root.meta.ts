@@ -16,7 +16,8 @@ export const rootMetadata: MetadataRegistry = {
     order: 0,
     // Officers are redirected from the home page to their department dashboard,
     // so the generic "Dashboard" item is redundant for them — hide it. Their
-    // entry point is "Department" (`/dashboard/department`).
-    access: { denyRoles: ["officer", "citizen"] },
+    // entry point is "Department" (`/dashboard/department`). Agencies enter at
+    // "Open tenders", so the generic dashboard is redundant for them too.
+    access: { denyRoles: ["officer", "citizen", "agency"] },
   },
 }

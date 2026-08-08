@@ -21,17 +21,24 @@ const STATUS_PHASE: Record<ComplaintStatus, ComplaintPhase> = {
   Assigned: "open",
   UnderReview: "open",
   ReportSubmitted: "open",
+  Reopened: "open",
   AwaitingBudget: "in-progress",
   BudgetAllocated: "in-progress",
   TenderNotificationIssued: "in-progress",
   TenderAllotted: "in-progress",
   WorkInProgress: "in-progress",
+  WorkCompleted: "in-progress",
   Resolved: "resolved",
   Closed: "resolved",
 }
 
+/**
+ * Phase for a status. Falls back to "open" for any value not in the map so a
+ * new backend status can never crash the map/badge rendering (the enum has
+ * drifted before — see WorkCompleted/Reopened).
+ */
 export function statusPhase(status: ComplaintStatus): ComplaintPhase {
-  return STATUS_PHASE[status]
+  return STATUS_PHASE[status] ?? "open"
 }
 
 export const PHASE_META: Record<
@@ -70,12 +77,14 @@ export const STATUS_LABEL: Record<ComplaintStatus, string> = {
   TenderNotificationIssued: "Tender issued",
   TenderAllotted: "Tender allotted",
   WorkInProgress: "Work in progress",
+  WorkCompleted: "Work completed",
   Resolved: "Resolved",
+  Reopened: "Reopened",
   Closed: "Closed",
 }
 
 export function statusLabel(status: ComplaintStatus): string {
-  return STATUS_LABEL[status]
+  return STATUS_LABEL[status] ?? status
 }
 
 export function statusBadgeClass(status: ComplaintStatus): string {

@@ -12,7 +12,9 @@ export type ComplaintStatus =
   | "TenderNotificationIssued"
   | "TenderAllotted"
   | "WorkInProgress"
+  | "WorkCompleted"
   | "Resolved"
+  | "Reopened"
   | "Closed"
 
 export type ComplaintPriority = "Low" | "Medium" | "High" | "Critical"
@@ -27,7 +29,9 @@ export const COMPLAINT_STATUSES: readonly ComplaintStatus[] = [
   "TenderNotificationIssued",
   "TenderAllotted",
   "WorkInProgress",
+  "WorkCompleted",
   "Resolved",
+  "Reopened",
   "Closed",
 ]
 
@@ -62,6 +66,10 @@ export interface Complaint {
   country: string
   aiCategory: string | null
   aiPriorityScore: number | null
+  /** Budget committed to this complaint, set on allocation; null until then. */
+  allocatedBudget: number | null
+  /** Financial year the budget was drawn from (e.g. "2026-27"). */
+  budgetYear: string | null
   createdAt: string
   updatedAt: string
 }

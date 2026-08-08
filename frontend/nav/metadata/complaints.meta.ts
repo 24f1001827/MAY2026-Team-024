@@ -1,14 +1,14 @@
 /**
  * nav/metadata/complaints.meta.ts
  *
- * Metadata for the complaints module. Open to all authenticated users:
- * citizens file and track, officers review and act.
+ * Metadata for the complaints module. Citizens file and track, officers review
+ * and act, admins oversee. Agencies have no role in complaints — they work off
+ * tenders and work orders — so they're denied here.
  */
 
 import { Megaphone01Icon } from "@hugeicons/core-free-icons"
 
 import type { MetadataRegistry } from "../types"
-import { OPEN_ACCESS } from "../access/roles"
 
 export const complaintsMetadata: MetadataRegistry = {
   complaints: {
@@ -16,7 +16,7 @@ export const complaintsMetadata: MetadataRegistry = {
     icon: Megaphone01Icon,
     description: "Raise, track, and resolve civic complaints.",
     order: 10,
-    access: OPEN_ACCESS,
+    access: { denyRoles: ["agency"] },
   },
   "complaints-new": {
     label: "File a complaint",
@@ -28,6 +28,7 @@ export const complaintsMetadata: MetadataRegistry = {
   "complaints-[id]": {
     label: "Complaint",
     breadcrumb: "Details",
+    access: { denyRoles: ["agency"] },
   },
   "complaints-[id]-edit": {
     label: "Edit complaint",

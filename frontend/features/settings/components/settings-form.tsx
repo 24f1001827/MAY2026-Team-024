@@ -3,6 +3,7 @@
 import { Button } from "@/components/shadcn/button"
 import { Input } from "@/components/shadcn/input"
 import { Label } from "@/components/shadcn/label"
+import { PageHeader } from "@/features/common/components/page-header"
 import { toast } from "@/lib/styles/toast-styles"
 import { AllotmentSettings } from "@/features/settings/components/allotment-settings"
 
@@ -38,15 +39,11 @@ export function SettingsForm({
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Settings
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Manage your account and preferences.
-        </p>
-      </div>
+    <div className="space-y-4 sm:space-y-6">
+      <PageHeader
+        title="Settings"
+        description="Manage your account and preferences."
+      />
 
       <form
         onSubmit={handleSubmit}
