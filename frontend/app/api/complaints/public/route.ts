@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server"
 
-import { getPublicComplaints } from "@/lib/utils/complaint/public-complaints"
+import { fetchPublicComplaints } from "@/lib/api/public-complaints"
 
 /**
- * Public, unauthenticated endpoint listing every complaint with the reporter's
- * identity stripped. Powers the public map at `/complaints` and is safe for any
- * external consumer.
+ * GET /api/complaints/public
+ *
+ * Public, unauthenticated list of complaints with reporter identity stripped
+ * (served from the Flask public endpoint). Safe for any external consumer;
+ * powers the public map at `/complaints`.
  */
-export function GET() {
-  return NextResponse.json({ complaints: getPublicComplaints() })
+export async function GET() {
+  const complaints = await fetchPublicComplaints()
+  return NextResponse.json({ complaints })
 }

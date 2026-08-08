@@ -1,11 +1,13 @@
-import {
-  mockComplaintRemarks,
-  mockComplaints,
-  mockDepartments,
-} from "@/components/shared/mock-data"
-import type { Complaint, ComplaintRemark } from "@/types/complaint"
+import type { Complaint } from "@/types/complaint"
 import type { Department } from "@/types/department"
 import type { ComplaintMapItem } from "@/features/dashboard/components/types"
+
+/**
+ * Pure, client-safe helpers for public complaint surfaces. The actual data
+ * fetching (server-only, unauthenticated) lives in `lib/api/public-complaints.ts`
+ * — keep this file free of server imports since client components
+ * (`complaints-view.tsx`) import `enrichComplaints` from here.
+ */
 
 /**
  * Label shown wherever a complaint's reporter would appear on a public surface.
@@ -23,36 +25,4 @@ export function enrichComplaints(
     ...complaint,
     departmentName: deptName.get(complaint.departmentId) ?? "Unassigned",
   }))
-}
-
-/** Strip reporter identity so nothing links a complaint back to a citizen. */
-function anonymize(complaint: Complaint): Complaint {
-  return { ...complaint, citizenId: "" }
-}
-
-/**
- * All complaints for the public map, enriched and anonymized. Backed by mock
- * data today; swap the source here (API/DB) without touching the consumers.
- */
-export function getPublicComplaints(): ComplaintMapItem[] {
-  return enrichComplaints(mockComplaints.map(anonymize), mockDepartments)
-}
-
-/** A single anonymized complaint plus its activity, or `null` if not found. */
-export function getPublicComplaint(id: string): {
-  complaint: Complaint
-  departmentName: string
-  remarks: ComplaintRemark[]
-} | null {
-  const complaint = mockComplaints.find((c) => c.id === id)
-  if (!complaint) return null
-
-  const department = mockDepartments.find((d) => d.id === complaint.departmentId)
-  const remarks = mockComplaintRemarks.filter((r) => r.complaintId === id)
-
-  return {
-    complaint: anonymize(complaint),
-    departmentName: department?.name ?? "Unassigned",
-    remarks,
-  }
 }
