@@ -18,6 +18,8 @@ from .enums import (
 
 from .user import User
 from .department import Department
+from .department_budget import DepartmentBudget
+from .budget_ledger import BudgetLedger
 from .officer import Officer
 from .agency import Agency
 

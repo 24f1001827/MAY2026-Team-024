@@ -2,6 +2,8 @@ from .user_repository import UserRepository
 from .agency_repository import AgencyRepository
 from .officer_repository import OfficerRepository
 from .department_repository import DepartmentRepository
+from .department_budget_repository import DepartmentBudgetRepository
+from .budget_ledger_repository import BudgetLedgerRepository
 from .complaint_image_repository import ComplaintImageRepository
 from .complaint_repository import ComplaintRepository
 from .complaint_assignment_repository import ComplaintAssignmentRepository

@@ -102,6 +102,18 @@ class Complaint(BaseModel):
         nullable=False,
     )
 
+    # Budget committed to this complaint (set on allocation), and the financial
+    # year it was drawn from. Null until an admin allocates budget.
+    allocated_budget = db.Column(
+        db.Numeric(14, 2),
+        nullable=True,
+    )
+
+    budget_year = db.Column(
+        db.String(9),
+        nullable=True,
+    )
+
     # -------------------------
     # Relationships
     # -------------------------
