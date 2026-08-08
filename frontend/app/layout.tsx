@@ -34,7 +34,11 @@ export default function RootLayout({
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      {/* suppressHydrationWarning: browser extensions (Bitwarden, etc.) inject
+          attributes like `bis_register` / `__processed_…` onto <body> before
+          hydration, which React would otherwise flag as a mismatch. It only
+          silences attribute diffs on this element, not real content mismatches. */}
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
