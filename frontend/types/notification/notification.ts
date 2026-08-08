@@ -1,23 +1,33 @@
 /**
- * `notifications` entity — mirrors the `notifications` table in the diagram.
+ * `notifications` entity — mirrors the `notifications` table and the backend
+ * `NotificationType` enum (values, not names).
  */
 
 export type NotificationType =
+  | "ComplaintCreated"
+  | "ComplaintAssigned"
+  | "AssignmentAccepted"
+  | "AssignmentRejected"
+  | "ReviewCompleted"
+  | "BudgetRequested"
+  | "BudgetAllocated"
   | "StatusChange"
-  | "Assignment"
-  | "InspectionDone"
   | "TenderPublished"
+  | "TenderAlloted"
+  | "WorkOrderCreated"
+  | "WorkOrderUpdated"
   | "SLABreach"
-  | "BudgetPending"
-  | "Closure"
+  | "ComplaintResolved"
+  | "ComplaintClosure"
 
 export interface Notification {
   id: number
-  userId: string // FK to users.id
   type: NotificationType
   title: string
   message: string
   isRead: boolean
+  /** ISO timestamp, or null while unread. */
   readAt: string | null
+  /** ISO timestamp. */
   createdAt: string
 }
