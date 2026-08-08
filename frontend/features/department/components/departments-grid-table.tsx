@@ -36,6 +36,7 @@ import {
 } from "@/components/shadcn/select"
 import { Pagination } from "@/features/common/components/pagination"
 import { formatCurrency } from "@/lib/utils/common/format"
+import type { DepartmentBudgetSummary } from "@/types/department"
 import { routes } from "@/nav"
 
 /** A department row as shown on its card. */
@@ -43,7 +44,7 @@ export type DepartmentCard = {
   id: number
   name: string
   description: string
-  budget: number
+  budget: DepartmentBudgetSummary | null
   headOfficerName: string | null
 }
 
@@ -170,7 +171,9 @@ export function DepartmentsGridTable({
                         </CardTitle>
                         <Badge variant="outline" className="mt-1 gap-1 text-xs">
                           <HugeiconsIcon icon={Wallet01Icon} size={12} />
-                          {formatCurrency(department.budget)}
+                          {department.budget
+                            ? formatCurrency(department.budget.total)
+                            : "No budget"}
                         </Badge>
                       </div>
                     </div>

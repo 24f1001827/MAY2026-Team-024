@@ -74,7 +74,6 @@ export function DepartmentForm({
     const data = new FormData(event.currentTarget)
     const name = String(data.get("name") ?? "").trim()
     const description = String(data.get("description") ?? "").trim()
-    const budgetRaw = String(data.get("budget") ?? "").trim()
     const headOfficerId = String(data.get("headOfficerId") ?? "")
 
     // Guard: a whitespace-only name trims to "" — don't send it.
@@ -85,25 +84,9 @@ export function DepartmentForm({
       return
     }
 
-    // Guard: parse the budget explicitly so a non-numeric value (possible via
-    // DOM/manual edits) fails fast here instead of becoming NaN → JSON `null`,
-    // which would silently clear the budget on update.
-    let budget: number | undefined
-    if (budgetRaw) {
-      const parsed = Number(budgetRaw)
-      if (!Number.isFinite(parsed) || parsed < 0) {
-        toast.error("Invalid budget", {
-          description: "Budget must be a non-negative number.",
-        })
-        return
-      }
-      budget = parsed
-    }
-
     const base: CreateDepartmentRequest = {
       name,
       description: description || undefined,
-      budget,
       // Empty string → null clears/omits the head.
       head_officer_id: headOfficerId || null,
     }
@@ -167,17 +150,6 @@ export function DepartmentForm({
               rows={3}
               defaultValue={department?.description}
               placeholder="What this department is responsible for"
-            />
-          </Field>
-
-          <Field label="Annual budget (₹)" htmlFor="budget">
-            <Input
-              id="budget"
-              name="budget"
-              type="number"
-              min={0}
-              defaultValue={department?.budget}
-              placeholder="25000000"
             />
           </Field>
 
