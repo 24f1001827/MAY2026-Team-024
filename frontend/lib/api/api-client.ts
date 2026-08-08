@@ -377,6 +377,20 @@ class ApiClient {
     )
     return this.handleResponse<T>(response)
   }
+
+  /** PATCH raw FormData (multipart updates, e.g. a work-order status change with completion proof). */
+  async patchFormData<T = unknown>(
+    endpoint: string,
+    formData: FormData,
+    options?: RequestOptions,
+  ): Promise<T> {
+    const response = await this.fetchWithRetry(
+      this.buildUrl(endpoint),
+      { method: "PATCH", body: formData },
+      { timeout: UPLOAD_TIMEOUT_MS, retries: 0, ...options },
+    )
+    return this.handleResponse<T>(response)
+  }
 }
 
 export const apiClient = new ApiClient()
@@ -391,4 +405,5 @@ export const api = {
   postMultipart: apiClient.postMultipart.bind(apiClient),
   postFormData: apiClient.postFormData.bind(apiClient),
   putFormData: apiClient.putFormData.bind(apiClient),
+  patchFormData: apiClient.patchFormData.bind(apiClient),
 }
