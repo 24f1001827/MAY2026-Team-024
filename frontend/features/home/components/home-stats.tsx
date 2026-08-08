@@ -7,20 +7,42 @@ import {
   Building03Icon,
 } from "@hugeicons/core-free-icons"
 
+import { fetchPublicStats } from "@/lib/api/public-stats"
+
 type Stat = {
   icon: IconSvgElement
   value: string
   label: string
 }
 
-const STATS: Stat[] = [
-  { icon: Megaphone01Icon, value: "12,480", label: "Complaints raised" },
-  { icon: Agreement02Icon, value: "3,140", label: "Tenders awarded" },
-  { icon: CheckmarkBadge02Icon, value: "92%", label: "Cases resolved" },
-  { icon: Building03Icon, value: "186", label: "Partner agencies" },
-]
+/** Server component — fetches real, non-sensitive platform stats. */
+export async function HomeStats() {
+  const stats = await fetchPublicStats()
+  const nf = new Intl.NumberFormat("en-IN")
 
-export function HomeStats() {
+  const STATS: Stat[] = [
+    {
+      icon: Megaphone01Icon,
+      value: nf.format(stats.complaintsTotal),
+      label: "Complaints raised",
+    },
+    {
+      icon: Agreement02Icon,
+      value: nf.format(stats.tendersAwarded),
+      label: "Tenders awarded",
+    },
+    {
+      icon: CheckmarkBadge02Icon,
+      value: `${stats.resolvedPct}%`,
+      label: "Cases resolved",
+    },
+    {
+      icon: Building03Icon,
+      value: nf.format(stats.agenciesTotal),
+      label: "Partner agencies",
+    },
+  ]
+
   return (
     <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       {STATS.map((stat) => (
