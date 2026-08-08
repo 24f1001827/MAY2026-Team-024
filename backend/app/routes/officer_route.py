@@ -15,6 +15,7 @@ from app.schemas import (
     OfficerComplaintDetailSchema,
     CreateTenderSchema,
     TenderResponseSchema,
+    OfficerTenderListSchema,
     OfficerProposalListSchema,
     OfficerProposalDetailSchema,
     UpdateProposalStatusSchema,
@@ -38,6 +39,7 @@ review_report_response_schema = ReviewReportResponseSchema()
 officer_complaint_detail_schema = OfficerComplaintDetailSchema()
 create_tender_schema = CreateTenderSchema()
 tender_response_schema = TenderResponseSchema()
+officer_tender_list_schema = OfficerTenderListSchema(many=True)
 officer_proposal_list_schema = OfficerProposalListSchema(
     many=True,
 )
@@ -463,6 +465,52 @@ def request_budget(complaint_id):
 
     except Exception as err:
 
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Internal server error.",
+                    "error": str(err),
+                }
+            ),
+            500,
+        )
+
+
+@officer_bp.get("/tenders")
+@jwt_required()
+@role_required(UserRole.OFFICER)
+def get_my_tenders():
+    """
+    Retrieve all tenders the officer has created (oversight list).
+    """
+
+    try:
+        tenders = OfficerService.get_my_tenders(get_jwt_identity())
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Tenders retrieved successfully.",
+                    "data": officer_tender_list_schema.dump(tenders),
+                }
+            ),
+            200,
+        )
+
+    except ValueError as err:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(err),
+                }
+            ),
+            404,
+        )
+
+    except Exception as err:
         return (
             jsonify(
                 {

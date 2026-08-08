@@ -244,6 +244,14 @@ class OfficerProposalListSchema(Schema):
 
     agency_id = fields.UUID()
 
+    # The reviewing officer sees the agency by name, not just its UUID.
+    agency_name = fields.Method("get_agency_name")
+
+    contact_person = fields.String(
+        attribute="agency.contact_person",
+        allow_none=True,
+    )
+
     proposal_amount = fields.Decimal(
         as_string=True,
     )
@@ -363,11 +371,13 @@ class DepartmentDashboardResponseSchema(Schema):
 
     def get_department(self, obj):
         d = obj["department"]
+        from app.services.admin_budget_service import department_budget_summary
+
         return {
             "id": d.id,
             "name": d.name,
             "description": d.description,
-            "budget": str(d.budget) if d.budget is not None else None,
+            "budget": department_budget_summary(d),
             "head_officer_id": (
                 str(d.head_officer_id) if d.head_officer_id else None
             ),
