@@ -15,6 +15,10 @@ export default async function DashboardPage() {
   // is now backend-integrated (GET /officer/department/dashboard).
   if (currentUser?.role === "Officer") redirect(routes.department)
 
+  // Agencies enter at the open-tenders list — that's their primary workflow
+  // (bid, track proposals, execute work orders). No generic dashboard home.
+  if (currentUser?.role === "Agency") redirect(routes.tenders.href)
+
   // Admins get the user-management console as their home.
   if (currentUser?.role === "Admin") {
     return <AdminDashboard name={currentUser.name} />

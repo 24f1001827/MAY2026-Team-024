@@ -1,32 +1,15 @@
-import {
-  TenderList,
-  type TenderView,
-} from "@/features/tender/components/tender-list"
-import {
-  mockComplaints,
-  mockTenders,
-  mockUsers,
-} from "@/components/shared/mock-data"
+import { AgencyTenders } from "@/features/agency/components/agency-tenders"
+import { OfficerTendersView } from "@/features/tender/components/officer-tenders-view"
+import { AdminTendersView } from "@/features/tender/components/admin-tenders-view"
 import { requireRoles } from "@/lib/auth/current-user"
 
 export default async function TendersPage() {
-  const user = await requireRoles(["Admin", "Officer", "Agency"])
-  const canManage = user.role === "Admin" || user.role === "Officer"
+  // Agencies bid on open tenders; officers oversee the ones they've published;
+  // admins see every tender across departments (read-only). Each row links to
+  // the linked complaint for full management.
+  const user = await requireRoles(["Officer", "Agency", "Admin"])
 
-  const complaintById = new Map(mockComplaints.map((c) => [c.id, c.title]))
-  const userById = new Map(mockUsers.map((u) => [u.id, u.name]))
-
-  const tenders: TenderView[] = mockTenders.map((t) => ({
-    id: t.id,
-    complaintId: t.complaintId,
-    complaintTitle: complaintById.get(t.complaintId) ?? "—",
-    title: t.title,
-    description: t.description,
-    estimatedCost: t.estimatedCost,
-    closingDate: t.closingDate,
-    status: t.status,
-    createdByName: userById.get(t.createdBy) ?? "—",
-  }))
-
-  return <TenderList tenders={tenders} canManage={canManage} />
+  if (user.role === "Agency") return <AgencyTenders />
+  if (user.role === "Admin") return <AdminTendersView />
+  return <OfficerTendersView />
 }
