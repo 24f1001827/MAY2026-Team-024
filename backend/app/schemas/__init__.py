@@ -33,7 +33,12 @@ from .officer_schema import (
     DepartmentDashboardResponseSchema,
     OfficerDirectorySchema,
 )
-from .admin_budget_schema import AllocateBudgetSchema
+from .admin_budget_schema import (
+    AllocateBudgetSchema,
+    DepartmentBudgetSchema,
+    AddDepartmentBudgetSchema,
+    BudgetLedgerEntrySchema,
+)
 from .agency_schema import (
     TenderListSchema,
     TenderDetailSchema,
