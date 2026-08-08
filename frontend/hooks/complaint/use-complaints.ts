@@ -29,3 +29,12 @@ export function useComplaint(id: string) {
     enabled: Boolean(id),
   })
 }
+
+/** Admin: the officer's review report for a complaint (null if none). */
+export function useReviewReport(id: string | null) {
+  return useQuery({
+    queryKey: [...complaintKeys.detail(id ?? ""), "review-report"],
+    queryFn: () => complaintService.getReviewReport(id as string),
+    enabled: Boolean(id),
+  })
+}

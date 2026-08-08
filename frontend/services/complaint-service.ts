@@ -20,6 +20,8 @@ import {
   normalizeComplaint,
   normalizeComplaintImages,
   normalizeComplaintRemarks,
+  normalizeComplaintReviewReport,
+  normalizeComplaintTender,
   type RawComplaint,
 } from "@/lib/utils/complaint/normalize"
 import type {
@@ -28,6 +30,8 @@ import type {
   CreateComplaintRequest,
   UpdateComplaintRequest,
 } from "@/types/complaint"
+import type { ComplaintTenderSummary } from "@/types/tender"
+import type { ReviewDecision, ReviewReport } from "@/types/officer"
 
 /** Backend success envelope: `{ success, message, data }`. */
 interface Envelope<T> {
@@ -39,6 +43,10 @@ export interface ComplaintWithImages {
   complaint: Complaint
   images: string[]
   remarks: ComplaintRemark[]
+  /** The complaint's tender, or null if none has been published yet. */
+  tender: ComplaintTenderSummary | null
+  /** The officer's review report, or null if not submitted yet. */
+  reviewReport: ReviewReport | null
 }
 
 /** Build the multipart body the backend expects from a create/update input. */
@@ -83,6 +91,8 @@ export const complaintService = {
       complaint: normalizeComplaint(res.data),
       images: normalizeComplaintImages(res.data),
       remarks: normalizeComplaintRemarks(res.data),
+      tender: normalizeComplaintTender(res.data),
+      reviewReport: normalizeComplaintReviewReport(res.data),
     }
   },
 
@@ -114,5 +124,50 @@ export const complaintService = {
   /** Citizen: delete a complaint. */
   async remove(id: string): Promise<void> {
     await api.delete(`/complaints/${id}`)
+  },
+
+  /** Citizen owner: reopen a resolved/closed complaint with a reason. */
+  async reopen(id: string, reason: string): Promise<void> {
+    await api.patch(`/complaints/${id}/reopen`, { reason })
+  },
+
+  /** Citizen owner: close a resolved complaint. */
+  async close(id: string): Promise<void> {
+    await api.patch(`/complaints/${id}/close`, {})
+  },
+
+  /** Admin: allocate budget to a complaint awaiting it. */
+  async allocateBudget(id: string, amount: number): Promise<void> {
+    await api.patch(`/admin/complaints/${id}/allocate-budget`, { amount })
+  },
+
+  /** Admin: the officer's review report for a complaint (null if none). */
+  async getReviewReport(id: string): Promise<ReviewReport | null> {
+    const res = await api.get<
+      Envelope<{
+        complaint_id: string
+        findings: string
+        estimated_cost?: string | number | null
+        estimated_duration_days?: number | null
+        decision: string
+        review_date: string
+      } | null>
+    >(`/admin/complaints/${id}/review-report`)
+    const raw = res.data
+    if (!raw) return null
+    return {
+      complaintId: raw.complaint_id,
+      findings: raw.findings,
+      estimatedCost:
+        raw.estimated_cost != null ? Number(raw.estimated_cost) : null,
+      estimatedDurationDays: raw.estimated_duration_days ?? null,
+      decision: raw.decision as ReviewDecision,
+      reviewDate: raw.review_date,
+    }
+  },
+
+  /** Officer/admin: add a remark to a complaint's activity timeline. */
+  async addRemark(id: string, message: string): Promise<void> {
+    await api.post(`/complaints/${id}/remark`, { message })
   },
 }
