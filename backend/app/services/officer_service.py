@@ -447,6 +447,19 @@ class OfficerService:
         return complaint
 
     @staticmethod
+    def get_my_tenders(user_id):
+        """
+        All tenders the officer has created (oversight list).
+        """
+
+        officer = OfficerRepository.get_by_user_id(user_id)
+
+        if officer is None:
+            raise ValueError("Officer not found.")
+
+        return TenderRepository.get_by_creator(user_id)
+
+    @staticmethod
     def create_tender(user_id, complaint_id, data):
         """
         Create a tender for a complaint.

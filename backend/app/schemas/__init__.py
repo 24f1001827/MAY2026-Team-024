@@ -26,6 +26,7 @@ from .officer_schema import (
     OfficerComplaintDetailSchema,
     CreateTenderSchema,
     TenderResponseSchema,
+    OfficerTenderListSchema,
     OfficerProposalListSchema,
     OfficerProposalDetailSchema,
     UpdateProposalStatusSchema,

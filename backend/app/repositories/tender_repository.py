@@ -38,6 +38,33 @@ class TenderRepository:
         )
 
     @staticmethod
+    def get_all():
+        """
+        Every tender in the system (admin oversight), newest first.
+        """
+
+        return (
+            Tender.query.filter_by(deleted_at=None)
+            .order_by(Tender.created_at.desc())
+            .all()
+        )
+
+    @staticmethod
+    def get_by_creator(user_id):
+        """
+        All tenders created by an officer (their oversight list), newest first.
+        """
+
+        return (
+            Tender.query.filter_by(
+                created_by=user_id,
+                deleted_at=None,
+            )
+            .order_by(Tender.created_at.desc())
+            .all()
+        )
+
+    @staticmethod
     def update():
         db.session.commit()
 
