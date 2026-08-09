@@ -18,20 +18,9 @@ export const agenciesMetadata: MetadataRegistry = {
     order: 30,
     access: ADMIN_ONLY,
   },
-  "agencies-create": {
-    label: "New agency",
-    breadcrumb: "New",
-    sidebarHidden: true,
-    access: ADMIN_ONLY,
-  },
   "agencies-[id]": {
     label: "Agency",
     breadcrumb: "Details",
-    access: ADMIN_ONLY,
-  },
-  "agencies-[id]-edit": {
-    label: "Edit agency",
-    breadcrumb: "Edit",
     access: ADMIN_ONLY,
   },
 }
