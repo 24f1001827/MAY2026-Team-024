@@ -30,6 +30,7 @@ import { PageHeader } from "@/features/common/components/page-header"
 import { Pagination } from "@/features/common/components/pagination"
 import { cn } from "@/lib/utils"
 import { formatCurrency, formatDate } from "@/lib/utils/common/format"
+import { createResetPage } from "@/lib/utils/common/pagination"
 import { TENDER_STATUS_META } from "@/lib/utils/tender/display"
 import type { OfficerTenderListItem } from "@/types/tender"
 import { routes } from "@/nav"
@@ -63,6 +64,9 @@ export function TendersListView({
   const router = useRouter()
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
+
+  // Any filter change returns to the first page.
+  const resetPage = createResetPage(setPage)
 
   const tenders = useMemo(() => data ?? [], [data])
 
@@ -112,10 +116,7 @@ export function TendersListView({
               />
               <Input
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
+                onChange={(e) => resetPage(setSearch)(e.target.value)}
                 placeholder="Search tenders…"
                 className="h-8 pl-8 text-sm"
               />

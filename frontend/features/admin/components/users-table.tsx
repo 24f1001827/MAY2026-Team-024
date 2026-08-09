@@ -54,6 +54,7 @@ import { Pagination } from "@/features/common/components/pagination"
 import { useUpdateMaxWorkload, useUpdateUserStatus } from "@/hooks/admin-users"
 import { toast } from "@/lib/styles/toast-styles"
 import { cn } from "@/lib/utils"
+import { createResetPage } from "@/lib/utils/common/pagination"
 import { getRoleMeta, getStatusMeta, ROLE_META } from "@/lib/utils/user/display"
 import type { AdminUser } from "@/types/admin-user"
 import {
@@ -137,6 +138,10 @@ export function UsersTable({
   const [roleFilter, setRoleFilter] = useState<UserRole | "all">("all")
   const [statusFilter, setStatusFilter] = useState<UserStatus | "all">("all")
   const [page, setPage] = useState(1)
+
+  // Any filter change returns to the first page.
+  const resetPage = createResetPage(setPage)
+
   const updateStatus = useUpdateUserStatus()
   const updateMaxWorkload = useUpdateMaxWorkload()
 
@@ -241,20 +246,16 @@ export function UsersTable({
             />
             <Input
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setPage(1)
-              }}
+              onChange={(e) => resetPage(setSearch)(e.target.value)}
               placeholder="Search name or email"
               className="h-9 w-48 pl-8"
             />
           </div>
           <Select
             value={roleFilter}
-            onValueChange={(v) => {
-              setRoleFilter(v as UserRole | "all")
-              setPage(1)
-            }}
+            onValueChange={resetPage((v: string) =>
+              setRoleFilter(v as UserRole | "all"),
+            )}
           >
             <SelectTrigger className="h-9 w-32">
               <SelectValue placeholder="Role" />
@@ -271,10 +272,9 @@ export function UsersTable({
           {showStatusFilter && (
             <Select
               value={statusFilter}
-              onValueChange={(v) => {
-                setStatusFilter(v as UserStatus | "all")
-                setPage(1)
-              }}
+              onValueChange={resetPage((v: string) =>
+                setStatusFilter(v as UserStatus | "all"),
+              )}
             >
               <SelectTrigger className="h-9 w-36">
                 <SelectValue placeholder="Status" />

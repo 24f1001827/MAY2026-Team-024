@@ -53,6 +53,7 @@ import { cn } from "@/lib/utils"
 import { toast } from "@/lib/styles/toast-styles"
 import { routes } from "@/nav"
 import { formatCurrency } from "@/lib/utils/common/format"
+import { createResetPage } from "@/lib/utils/common/pagination"
 import {
   PRIORITY_META,
   statusBadgeClass,
@@ -325,10 +326,7 @@ function QueueTab({
     filtered,
     page
   )
-  const onFilter = (setter: (v: string) => void) => (v: string) => {
-    setter(v)
-    setPage(1)
-  }
+  const resetPage = createResetPage(setPage)
 
   return (
     <Card className="[--card-spacing:--spacing(6)]">
@@ -344,10 +342,10 @@ function QueueTab({
         )}
         <TabFilters
           search={search}
-          onSearchChange={onFilter(setSearch)}
+          onSearchChange={resetPage(setSearch)}
           searchPlaceholder="Search complaints…"
           filter={priority}
-          onFilterChange={onFilter(setPriority)}
+          onFilterChange={resetPage(setPriority)}
           filterPlaceholder="Priority"
           options={[
             { value: "all", label: "All priorities" },
@@ -435,10 +433,7 @@ function MyComplaintsTab({
     filtered,
     page
   )
-  const onFilter = (setter: (v: string) => void) => (v: string) => {
-    setter(v)
-    setPage(1)
-  }
+  const resetPage = createResetPage(setPage)
 
   return (
     <Card className="[--card-spacing:--spacing(6)]">
@@ -448,10 +443,10 @@ function MyComplaintsTab({
       <CardContent className="space-y-4">
         <TabFilters
           search={search}
-          onSearchChange={onFilter(setSearch)}
+          onSearchChange={resetPage(setSearch)}
           searchPlaceholder="Search complaints…"
           filter={status}
-          onFilterChange={onFilter(setStatus)}
+          onFilterChange={resetPage(setStatus)}
           filterPlaceholder="Status"
           options={[
             { value: "all", label: "All statuses" },
@@ -551,10 +546,7 @@ function OfficersTab({
     filtered,
     page
   )
-  const onFilter = (setter: (v: string) => void) => (v: string) => {
-    setter(v)
-    setPage(1)
-  }
+  const resetPage = createResetPage(setPage)
 
   return (
     <Card className="[--card-spacing:--spacing(6)]">
@@ -566,10 +558,10 @@ function OfficersTab({
       <CardContent className="space-y-4">
         <TabFilters
           search={search}
-          onSearchChange={onFilter(setSearch)}
+          onSearchChange={resetPage(setSearch)}
           searchPlaceholder="Search officers…"
           filter={availability}
-          onFilterChange={onFilter(setAvailability)}
+          onFilterChange={resetPage(setAvailability)}
           filterPlaceholder="Availability"
           options={[
             { value: "all", label: "All availability" },

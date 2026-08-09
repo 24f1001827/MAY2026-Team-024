@@ -23,6 +23,7 @@ import {
 } from "@/components/shadcn/table"
 import { Pagination } from "@/features/common/components/pagination"
 import { cn } from "@/lib/utils"
+import { createResetPage } from "@/lib/utils/common/pagination"
 import { getRoleMeta, getStatusMeta } from "@/lib/utils/user/display"
 import type { AdminUser } from "@/types/admin-user"
 import { USER_STATUSES, type UserStatus } from "@/types/user"
@@ -54,12 +55,7 @@ export function ApprovalHistory({ users }: { users: AdminUser[] }) {
   const [page, setPage] = useState(1)
 
   // Any filter change returns to the first page.
-  const resetPage =
-    <T,>(setter: (v: T) => void) =>
-    (v: T) => {
-      setter(v)
-      setPage(1)
-    }
+  const resetPage = createResetPage(setPage)
 
   // Officer + agency registration requests. (React Compiler memoizes.)
   const requests = users.filter((u) =>
