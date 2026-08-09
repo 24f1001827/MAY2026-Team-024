@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/shadcn/table"
 import { AgencyDetail } from "@/features/agency/components/agency-detail"
-import type { AgencyView } from "@/features/agency/components/agency-list"
+import type { AgencyView } from "@/types/agency"
 import {
   useAdminAgency,
   useAdminAgencyWorkOrders,
@@ -46,7 +46,7 @@ export function AdminAgencyDetailView({ id }: { id: string }) {
 
   if (isError || !data) {
     return (
-      <div className="mx-auto w-full max-w-3xl rounded-2xl border border-destructive/30 bg-destructive/5 p-10 text-center">
+      <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-10 text-center">
         <p className="text-sm font-medium text-destructive">
           Couldn’t load this agency.
         </p>
@@ -73,11 +73,9 @@ export function AdminAgencyDetailView({ id }: { id: string }) {
   }
 
   return (
-    <div className="space-y-6">
-      <AgencyDetail agency={view} canManage={false} />
-      <div className="mx-auto w-full max-w-3xl">
-        <AgencyWorkOrdersSection id={id} />
-      </div>
+    <div className="space-y-4 sm:space-y-6">
+      <AgencyDetail agency={view} />
+      <AgencyWorkOrdersSection id={id} />
     </div>
   )
 }
