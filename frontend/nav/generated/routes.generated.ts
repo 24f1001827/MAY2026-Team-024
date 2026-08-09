@@ -5,7 +5,7 @@
  * Run `bun routes:generate` to regenerate from the filesystem.
  *
  * Source: app/dashboard (scanned recursively)
- * Generated: 2026-08-08
+ * Generated: 2026-08-09
  */
 
 import type { RouteNode } from '../types';
@@ -25,30 +25,13 @@ export const ROUTE_TREE: RouteNode = {
     isCatchAll: false,
     children: [
       {
-        id: 'agencies-create',
-        segment: 'create',
-        path: '/dashboard/agencies/create',
-        isDynamic: false,
-        isCatchAll: false,
-        children: [],
-      },
-      {
         id: 'agencies-[id]',
         segment: '[id]',
         path: '/dashboard/agencies/[id]',
         isDynamic: true,
         isCatchAll: false,
         paramName: 'id',
-        children: [
-            {
-              id: 'agencies-[id]-edit',
-              segment: 'edit',
-              path: '/dashboard/agencies/[id]/edit',
-              isDynamic: false,
-              isCatchAll: false,
-              children: [],
-            },
-          ],
+        children: [],
       },
     ],
   },
@@ -170,34 +153,7 @@ export const ROUTE_TREE: RouteNode = {
     path: '/dashboard/officers',
     isDynamic: false,
     isCatchAll: false,
-    children: [
-      {
-        id: 'officers-create',
-        segment: 'create',
-        path: '/dashboard/officers/create',
-        isDynamic: false,
-        isCatchAll: false,
-        children: [],
-      },
-      {
-        id: 'officers-[id]',
-        segment: '[id]',
-        path: '/dashboard/officers/[id]',
-        isDynamic: true,
-        isCatchAll: false,
-        paramName: 'id',
-        children: [
-            {
-              id: 'officers-[id]-edit',
-              segment: 'edit',
-              path: '/dashboard/officers/[id]/edit',
-              isDynamic: false,
-              isCatchAll: false,
-              children: [],
-            },
-          ],
-      },
-    ],
+    children: [],
   },
   {
     id: 'pending-approvals',
