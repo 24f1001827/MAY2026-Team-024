@@ -103,6 +103,10 @@ MAIL_USE_TLS=
 MAIL_USERNAME=
 MAIL_PASSWORD=
 MAIL_DEFAULT_SENDER=
+
+# Gemini complaint triage (free tier supported)
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
 ---

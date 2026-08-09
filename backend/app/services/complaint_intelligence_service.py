@@ -4,13 +4,16 @@ Kept provider-free deliberately: deployments work immediately and an LLM adapter
 replace `suggest_department` / `semantic_similarity` without changing workflows.
 """
 import math
+import json
+import os
 import re
-from collections import Counter
+import requests
 
 from app.models import ComplaintPriority
 
 
 class ComplaintIntelligenceService:
+    GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     CATEGORY_KEYWORDS = {
         "Roads": ("pothole", "road", "street", "footpath", "traffic", "bridge"),
         "Water Supply": ("water", "pipe", "leak", "sewage", "drain", "flood"),
@@ -26,6 +29,16 @@ class ComplaintIntelligenceService:
 
     @classmethod
     def suggest_department(cls, title, description, departments):
+        analysis = cls._gemini_analysis(title, description, departments)
+        if analysis and analysis.get("department_name"):
+            matched = next((d for d in departments if d.name.casefold() == analysis["department_name"].casefold()), None)
+            if matched:
+                return {
+                    "department_id": matched.id,
+                    "department_name": matched.name,
+                    "confidence": analysis["confidence"],
+                    "reason": analysis["reason"],
+                }
         text = f"{title} {description}".lower()
         scores = {
             department.name: sum(text.count(keyword) for keyword in cls.CATEGORY_KEYWORDS.get(department.name, ()))
@@ -38,12 +51,57 @@ class ComplaintIntelligenceService:
 
     @classmethod
     def classify(cls, title, description):
+        analysis = cls._gemini_analysis(title, description, [])
+        if analysis:
+            return analysis["category"], analysis["priority_score"]
         text = f"{title} {description}".lower()
         category = max(cls.CATEGORY_KEYWORDS, key=lambda key: sum(text.count(word) for word in cls.CATEGORY_KEYWORDS[key]))
         severity_terms = ("death", "fire", "collapse", "electrocution", "gas leak", "flood", "accident")
         high_terms = ("danger", "unsafe", "major", "hospital", "school", "blocked")
         score = 35 + 35 * sum(term in text for term in severity_terms) + 15 * sum(term in text for term in high_terms)
         return category, min(100, score)
+
+    @classmethod
+    def _gemini_analysis(cls, title, description, departments):
+        """Use Gemini when configured; malformed/failed responses fall back safely."""
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            return None
+        department_names = [department.name for department in departments]
+        prompt = f"""You triage civic complaints. Return JSON only, with keys category,
+priority_score, department_name, confidence, and reason. priority_score is an integer
+0-100 based on public safety, service disruption, vulnerable locations, and scale.
+department_name must be one of {department_names!r} or null. Never treat reporting
+volume as severity. category is a concise issue category, max 100 characters.
+Complaint title: {title!r}
+Complaint description: {description!r}"""
+        try:
+            response = requests.post(
+                cls.GEMINI_URL.format(model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash")),
+                params={"key": api_key},
+                json={
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"responseMimeType": "application/json", "temperature": 0.1},
+                },
+                timeout=12,
+            )
+            response.raise_for_status()
+            text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+            result = json.loads(text)
+            score = int(result["priority_score"])
+            confidence = int(result.get("confidence", 0))
+            category = str(result["category"]).strip()[:100]
+            if not category or not 0 <= score <= 100 or not 0 <= confidence <= 100:
+                return None
+            return {
+                "category": category,
+                "priority_score": score,
+                "department_name": result.get("department_name"),
+                "confidence": confidence,
+                "reason": str(result.get("reason", "Gemini classification."))[:300],
+            }
+        except (requests.RequestException, KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError):
+            return None
 
     @classmethod
     def similarity(cls, first, second):

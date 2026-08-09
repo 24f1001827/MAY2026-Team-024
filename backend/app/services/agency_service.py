@@ -17,6 +17,7 @@ from datetime import datetime
 from app.utils import upload_document
 from app.services.notification_service import NotificationService
 from app.services.activity_service import ActivityService
+from app.services.complaint_service import ComplaintService
 
 
 class AgencyService:
@@ -226,6 +227,7 @@ class AgencyService:
 
             _prev = complaint.status
             complaint.status = ComplaintStatus.WORK_IN_PROGRESS
+            ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.WORK_IN_PROGRESS)
 
             ActivityService.record(
                 complaint.id,
@@ -254,6 +256,7 @@ class AgencyService:
             _complaint = work_order.tender.complaint
             _prev = _complaint.status
             _complaint.status = ComplaintStatus.WORK_COMPLETED
+            ComplaintService.notify_cluster_citizens(_complaint, ComplaintStatus.WORK_COMPLETED)
 
             ActivityService.record(
                 _complaint.id,

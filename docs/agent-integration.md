@@ -1,6 +1,6 @@
 # Complaint intelligence and related reports
 
-New complaints receive an explainable category/severity assessment. The department suggestion is non-binding: the citizen remains responsible for selecting the final department.
+New complaints receive a Gemini-powered category/severity assessment when `GEMINI_API_KEY` is configured; otherwise the deterministic baseline keeps submissions available. The department suggestion is non-binding: the citizen remains responsible for selecting the final department.
 
 Every complaint is preserved. A `complaint_cluster` represents the physical civic issue; the first report is its primary report and later high-confidence reports are linked to it. A linked report does not lose its reporter, images, or history.
 
@@ -15,3 +15,5 @@ The cluster priority score begins with the severity score and adds eight points 
 ## Overrides
 
 Citizens can dispute an automatic grouping. Administrators can link or unlink reports. Officers can do the same for complaints within their own department. A disputed grouping remains visible until staff resolves it by linking or unlinking the report.
+
+Whenever a complaint in a cluster changes lifecycle status, every distinct citizen who has reported that issue receives a status notification.

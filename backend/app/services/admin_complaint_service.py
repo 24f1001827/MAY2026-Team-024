@@ -21,6 +21,7 @@ from app.repositories import (
 
 from app.services.notification_service import NotificationService
 from app.services.activity_service import ActivityService
+from app.services.complaint_service import ComplaintService
 
 
 class AdminComplaintService:
@@ -122,6 +123,7 @@ class AdminComplaintService:
 
         previous_status = complaint.status
         complaint.status = ComplaintStatus.ASSIGNED
+        ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.ASSIGNED)
         # Count the case toward the assignee's workload immediately (released on
         # reject / closure).
         officer.current_workload += 1

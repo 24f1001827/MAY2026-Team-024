@@ -27,6 +27,7 @@ from app.repositories import (
 )
 
 from app.services.notification_service import NotificationService
+from app.services.complaint_service import ComplaintService
 from app.services.settings_service import SettingsService
 from app.services.activity_service import ActivityService
 
@@ -232,6 +233,7 @@ class OfficerService:
 
         previous_status = assignment.complaint.status
         assignment.complaint.status = ComplaintStatus.UNDER_REVIEW
+        ComplaintService.notify_cluster_citizens(assignment.complaint, ComplaintStatus.UNDER_REVIEW)
 
         ActivityService.record(
             assignment.complaint.id,
@@ -359,6 +361,7 @@ class OfficerService:
 
         _prev = complaint.status
         complaint.status = ComplaintStatus.REPORT_SUBMITTED
+        ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.REPORT_SUBMITTED)
 
         ActivityService.record(
             complaint.id,
@@ -419,6 +422,7 @@ class OfficerService:
 
         _prev = complaint.status
         complaint.status = ComplaintStatus.AWAITING_BUDGET
+        ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.AWAITING_BUDGET)
 
         ActivityService.record(
             complaint.id,
@@ -516,6 +520,7 @@ class OfficerService:
 
         _prev = complaint.status
         complaint.status = ComplaintStatus.TENDER_NOTIFICATION_ISSUED
+        ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.TENDER_NOTIFICATION_ISSUED)
 
         ActivityService.record(
             complaint.id,
@@ -676,6 +681,7 @@ class OfficerService:
             _complaint = proposal.tender.complaint
             _prev = _complaint.status
             _complaint.status = ComplaintStatus.TENDER_ALLOTTED
+            ComplaintService.notify_cluster_citizens(_complaint, ComplaintStatus.TENDER_ALLOTTED)
 
             ActivityService.record(
                 _complaint.id,
@@ -851,6 +857,7 @@ class OfficerService:
         _complaint = work_order.tender.complaint
         _prev = _complaint.status
         _complaint.status = ComplaintStatus.RESOLVED
+        ComplaintService.notify_cluster_citizens(_complaint, ComplaintStatus.RESOLVED)
 
         ActivityService.record(
             _complaint.id,
@@ -946,6 +953,7 @@ class OfficerService:
 
         _prev = complaint.status
         complaint.status = ComplaintStatus.WORK_IN_PROGRESS
+        ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.WORK_IN_PROGRESS)
 
         ActivityService.record(
             complaint.id,

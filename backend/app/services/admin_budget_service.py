@@ -16,6 +16,7 @@ from app.repositories import (
 )
 from app.services.notification_service import NotificationService
 from app.services.activity_service import ActivityService
+from app.services.complaint_service import ComplaintService
 
 
 def current_financial_year():
@@ -204,6 +205,7 @@ class AdminBudgetService:
         complaint.allocated_budget = amount
         complaint.budget_year = financial_year
         complaint.status = ComplaintStatus.BUDGET_ALLOCATED
+        ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.BUDGET_ALLOCATED)
 
         ActivityService.record(
             complaint_id,
