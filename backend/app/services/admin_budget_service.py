@@ -205,7 +205,7 @@ class AdminBudgetService:
         complaint.allocated_budget = amount
         complaint.budget_year = financial_year
         complaint.status = ComplaintStatus.BUDGET_ALLOCATED
-        ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.BUDGET_ALLOCATED)
+        ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.BUDGET_ALLOCATED, complaint.citizen_id)
 
         ActivityService.record(
             complaint_id,

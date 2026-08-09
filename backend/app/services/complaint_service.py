@@ -134,10 +134,11 @@ class ComplaintService:
             member.ai_priority_score = score
 
     @staticmethod
-    def notify_cluster_citizens(complaint, status):
+    def notify_cluster_citizens(complaint, status, exclude_citizen_id=None):
         """Send one status notification to every distinct reporter in the issue."""
         members = ComplaintRepository.get_cluster_members(complaint.cluster_id) if complaint.cluster_id else [complaint]
         recipients = {member.citizen_id for member in members}
+        recipients.discard(exclude_citizen_id)
         for citizen_id in recipients:
             NotificationService.create_notification({
                 "user_id": citizen_id,
@@ -661,7 +662,7 @@ class ComplaintService:
         )
 
         complaint.status = ComplaintStatus.CLOSED
-        ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.CLOSED)
+        ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.CLOSED, complaint.citizen_id)
 
         work_order.status = WorkOrderStatus.CLOSED
 

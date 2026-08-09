@@ -227,7 +227,7 @@ class AgencyService:
 
             _prev = complaint.status
             complaint.status = ComplaintStatus.WORK_IN_PROGRESS
-            ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.WORK_IN_PROGRESS)
+            ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.WORK_IN_PROGRESS, complaint.citizen_id)
 
             ActivityService.record(
                 complaint.id,

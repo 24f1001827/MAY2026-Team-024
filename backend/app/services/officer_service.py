@@ -361,7 +361,7 @@ class OfficerService:
 
         _prev = complaint.status
         complaint.status = ComplaintStatus.REPORT_SUBMITTED
-        ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.REPORT_SUBMITTED)
+        ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.REPORT_SUBMITTED, complaint.citizen_id)
 
         ActivityService.record(
             complaint.id,
@@ -857,7 +857,7 @@ class OfficerService:
         _complaint = work_order.tender.complaint
         _prev = _complaint.status
         _complaint.status = ComplaintStatus.RESOLVED
-        ComplaintService.notify_cluster_citizens(_complaint, ComplaintStatus.RESOLVED)
+        ComplaintService.notify_cluster_citizens(_complaint, ComplaintStatus.RESOLVED, _complaint.citizen_id)
 
         ActivityService.record(
             _complaint.id,
