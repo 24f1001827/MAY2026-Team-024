@@ -6,6 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import type { IconSvgElement } from "@hugeicons/react"
 import {
   ArrowRight01Icon,
+  Delete02Icon,
   InboxIcon,
   Megaphone01Icon,
   PencilEdit02Icon,
@@ -622,6 +623,8 @@ export function DepartmentDashboard({
   onAccept,
   onReject,
   actingId,
+  onDelete,
+  deleting = false,
 }: {
   department: Department
   /** All officers in the department. */
@@ -654,6 +657,14 @@ export function DepartmentDashboard({
   onReject?: (complaintId: string) => void
   /** Complaint id with an accept/reject in flight. */
   actingId?: string | null
+  /**
+   * Delete this department. Rendered next to "Edit department" only when the
+   * viewer `canManage`; the confirmation dialog lives with the caller that owns
+   * the mutation. Omitted where deletion isn't offered (the officer view).
+   */
+  onDelete?: () => void
+  /** True while a delete request is in flight. */
+  deleting?: boolean
 }) {
   const [queue, setQueue] = useState<Complaint[]>(initialQueue)
 
@@ -707,12 +718,25 @@ export function DepartmentDashboard({
             title={department.name}
             description={department.description}
             actions={canManage ? (
-              <Button asChild variant="outline">
-                <Link href={routes.departments.detail(department.id).edit}>
-                  <HugeiconsIcon icon={PencilEdit02Icon} />
-                  Edit department
-                </Link>
-              </Button>
+              <>
+                <Button asChild variant="outline">
+                  <Link href={routes.departments.detail(department.id).edit}>
+                    <HugeiconsIcon icon={PencilEdit02Icon} />
+                    Edit department
+                  </Link>
+                </Button>
+                {onDelete && (
+                  <Button
+                    variant="outline"
+                    className="text-destructive hover:text-destructive"
+                    onClick={onDelete}
+                    disabled={deleting}
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} />
+                    Delete
+                  </Button>
+                )}
+              </>
             ) : undefined
           }
       />
