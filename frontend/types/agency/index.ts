@@ -1,4 +1,5 @@
 export * from "./agency"
+export * from "./agency-view"
 export * from "./create-agency"
 export * from "./update-agency"
 export * from "./proposal"
