@@ -33,6 +33,7 @@ import { Pagination } from "@/features/common/components/pagination"
 import { useOfficerDirectory } from "@/hooks/officer"
 import { AVAILABILITY_META } from "@/lib/utils/officer/display"
 import { cn } from "@/lib/utils"
+import { createResetPage } from "@/lib/utils/common/pagination"
 import {
   AVAILABILITY_STATUSES,
   type AvailabilityStatus,
@@ -103,11 +104,8 @@ export function OfficerDirectory() {
   const endIndex = Math.min(startIndex + PAGE_SIZE, filtered.length)
   const rows = filtered.slice(startIndex, endIndex)
 
-  const resetPage =
-    (setter: (v: string) => void) => (v: string) => {
-      setter(v)
-      setPage(1)
-    }
+  // Any filter change returns to the first page.
+  const resetPage = createResetPage(setPage)
 
   if (isError) {
     return (
