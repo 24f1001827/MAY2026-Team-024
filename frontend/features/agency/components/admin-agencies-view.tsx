@@ -59,7 +59,7 @@ export function AdminAgenciesView() {
           Loading agencies…
         </div>
       ) : (
-        <AgenciesGridTable agencies={agencies} canManage={false} />
+        <AgenciesGridTable agencies={agencies} />
       )}
     </div>
   )

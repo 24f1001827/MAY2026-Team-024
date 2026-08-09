@@ -8,7 +8,6 @@ import {
   Building03Icon,
   LicenseIcon,
   Mail01Icon,
-  PlusSignIcon,
   Search01Icon,
   UserIcon,
 } from "@hugeicons/core-free-icons"
@@ -19,7 +18,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/shadcn/card"
-import { Button } from "@/components/shadcn/button"
 import { Input } from "@/components/shadcn/input"
 import {
   Empty,
@@ -86,13 +84,7 @@ interface AgencyFilters {
   status: UserStatus | "all"
 }
 
-export function AgenciesGridTable({
-  agencies,
-  canManage,
-}: {
-  agencies: AgencyCard[]
-  canManage: boolean
-}) {
+export function AgenciesGridTable({ agencies }: { agencies: AgencyCard[] }) {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(12)
   const [filters, setFilters] = useState<AgencyFilters>({
@@ -263,17 +255,9 @@ export function AgenciesGridTable({
               <EmptyDescription>
                 {filters.search || filters.status !== "all"
                   ? "Try adjusting your filters to find what you're looking for."
-                  : "Get started by registering your first agency."}
+                  : "Agencies appear here once they register and are approved."}
               </EmptyDescription>
             </EmptyHeader>
-            {canManage && !filters.search && filters.status === "all" && (
-              <Button asChild variant="brand">
-                <Link href={routes.agencies.create}>
-                  <HugeiconsIcon icon={PlusSignIcon} />
-                  New agency
-                </Link>
-              </Button>
-            )}
           </Empty>
         )}
       </CardContent>
