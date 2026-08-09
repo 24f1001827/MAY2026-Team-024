@@ -28,6 +28,7 @@ import type {
 } from "@/types/complaint"
 import { LocationPicker } from "./location-picker"
 import { IndiaIssueLocationForm } from "./india-issue-location-form"
+import { complaintService, type DepartmentSuggestion } from "@/services/complaint-service"
 
 /** Shared `id` linking the header's submit button to this form. */
 export const COMPLAINT_FORM_ID = "complaint-form"
@@ -83,6 +84,31 @@ export function ComplaintForm({
     lng: complaint?.longitude ?? null,
   })
   const [images, setImages] = useState<File[]>([])
+  const [suggestion, setSuggestion] = useState<DepartmentSuggestion | null>(null)
+  const [suggesting, setSuggesting] = useState(false)
+
+  async function handleSuggestion() {
+    const form = document.getElementById(COMPLAINT_FORM_ID) as HTMLFormElement | null
+    const title = String(new FormData(form ?? undefined).get("title") ?? "").trim()
+    const description = String(new FormData(form ?? undefined).get("description") ?? "").trim()
+    if (title.length < 5 || description.length < 10) {
+      toast.error("Add a title and description first")
+      return
+    }
+    setSuggesting(true)
+    try {
+      const result = await complaintService.suggestDepartment(title, description)
+      setSuggestion(result)
+      if (result.department_id && form) {
+        const select = form.elements.namedItem("departmentId") as HTMLSelectElement | null
+        if (select) select.value = String(result.department_id)
+      }
+    } catch (error) {
+      toast.error("Couldn’t suggest a department", { description: getApiErrorMessage(error, "Please choose one manually.") })
+    } finally {
+      setSuggesting(false)
+    }
+  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -211,6 +237,14 @@ export function ComplaintForm({
                 </option>
               ))}
             </NativeSelect>
+            {!isEdit && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <button type="button" onClick={handleSuggestion} disabled={suggesting} className="font-medium text-brand hover:underline disabled:opacity-50">
+                  {suggesting ? "Finding a match…" : "Suggest a department"}
+                </button>
+                {suggestion && <span>{suggestion.department_name ? `${suggestion.department_name} suggested (${suggestion.confidence}% confidence). You can change it.` : "No confident suggestion — choose a department."}</span>}
+              </div>
+            )}
           </Field>
 
           {/* Address + Locality share a row. */}

@@ -102,6 +102,17 @@ class Complaint(BaseModel):
         nullable=False,
     )
 
+    cluster_id = db.Column(
+        db.UUID(as_uuid=True),
+        db.ForeignKey("complaint_clusters.id"),
+        nullable=True,
+        index=True,
+    )
+
+    is_cluster_primary = db.Column(db.Boolean, default=False, nullable=False)
+
+    cluster_disputed = db.Column(db.Boolean, default=False, nullable=False)
+
     # Budget committed to this complaint (set on allocation), and the financial
     # year it was drawn from. Null until an admin allocates budget.
     allocated_budget = db.Column(
@@ -127,6 +138,8 @@ class Complaint(BaseModel):
         "Department",
         back_populates="complaints",
     )
+
+    cluster = db.relationship("ComplaintCluster", back_populates="complaints")
 
     images = db.relationship(
         "ComplaintImage",

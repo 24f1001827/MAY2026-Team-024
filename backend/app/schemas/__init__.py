@@ -13,6 +13,8 @@ from .complaint_schema import (
     PublicComplaintDetailSchema,
     AssignComplaintSchema,
     ReopenComplaintSchema,
+    DepartmentSuggestionSchema,
+    LinkComplaintSchema,
 )
 
 from .admin_user_schema import (

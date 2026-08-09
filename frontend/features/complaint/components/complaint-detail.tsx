@@ -39,7 +39,7 @@ import { Textarea } from "@/components/shadcn/textarea"
 import { PageHeader } from "@/features/common/components/page-header"
 import { OfficerTenderSection } from "@/features/tender/components/officer-tender-section"
 import { ComplaintLifecycleActions } from "@/features/complaint/components/complaint-lifecycle-actions"
-import { useAddRemark } from "@/hooks/complaint"
+import { useAddRemark, useDisputeCluster, useLinkCluster, useUnlinkCluster } from "@/hooks/complaint"
 import { ApiError } from "@/lib/api/api-client"
 import { cn } from "@/lib/utils"
 import { routes } from "@/nav"
@@ -113,6 +113,24 @@ export function ComplaintDetail({
   const [remarkOpen, setRemarkOpen] = useState(false)
   const [remarkMessage, setRemarkMessage] = useState("")
   const addRemark = useAddRemark()
+  const disputeCluster = useDisputeCluster()
+  const linkCluster = useLinkCluster()
+  const unlinkCluster = useUnlinkCluster()
+
+  async function handleClusterAction(action: "dispute" | "unlink" | "link") {
+    try {
+      if (action === "dispute") await disputeCluster.mutateAsync(complaint.id)
+      if (action === "unlink") await unlinkCluster.mutateAsync(complaint.id)
+      if (action === "link") {
+        const targetComplaintId = window.prompt("Enter the primary complaint ID to link this report to:")
+        if (!targetComplaintId) return
+        await linkCluster.mutateAsync({ id: complaint.id, targetComplaintId })
+      }
+      toast.success(action === "dispute" ? "Grouping dispute submitted." : "Complaint grouping updated.")
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn’t update complaint grouping.")
+    }
+  }
 
   // Newest first, regardless of the source ordering.
   const activity = [...initialRemarks].sort((a, b) =>
@@ -216,6 +234,11 @@ export function ComplaintDetail({
                     <span className="text-muted-foreground">Not scored</span>
                   )}
                 </DetailRow>
+                <DetailRow icon={ClipboardIcon} label="Related reports">
+                  {complaint.clusterReportCount} report{complaint.clusterReportCount === 1 ? "" : "s"}
+                  {complaint.isClusterPrimary && " · primary report"}
+                  {complaint.clusterDisputed && " · grouping disputed"}
+                </DetailRow>
                 {complaint.allocatedBudget != null && (
                   <DetailRow icon={Wallet01Icon} label="Allocated budget">
                     {formatCurrency(complaint.allocatedBudget)}
@@ -228,6 +251,19 @@ export function ComplaintDetail({
                   </DetailRow>
                 )}
               </dl>
+              {!readOnly && (
+                <div className="flex flex-wrap gap-2 border-t pt-4">
+                  {currentRole === "Citizen" && complaint.clusterReportCount > 1 && !complaint.clusterDisputed && (
+                    <Button size="sm" variant="outline" onClick={() => handleClusterAction("dispute")}>Dispute grouping</Button>
+                  )}
+                  {(currentRole === "Admin" || currentRole === "Officer") && (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => handleClusterAction("link")}>Link to similar complaint</Button>
+                      {!complaint.isClusterPrimary && <Button size="sm" variant="outline" onClick={() => handleClusterAction("unlink")}>Unlink report</Button>}
+                    </>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 

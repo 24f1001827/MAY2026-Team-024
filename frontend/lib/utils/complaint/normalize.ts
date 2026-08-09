@@ -68,6 +68,10 @@ export interface RawComplaint {
   priority: string
   ai_category?: string | null
   ai_priority_score?: number | null
+  cluster_id?: string | null
+  is_cluster_primary?: boolean
+  cluster_disputed?: boolean
+  cluster_report_count?: number
   latitude?: number | string | null
   longitude?: number | string | null
   address: string
@@ -125,6 +129,10 @@ export function normalizeComplaint(raw: RawComplaint): Complaint {
     pincode: raw.pincode,
     aiCategory: raw.ai_category ?? null,
     aiPriorityScore: raw.ai_priority_score ?? null,
+    clusterId: raw.cluster_id ?? null,
+    isClusterPrimary: raw.is_cluster_primary ?? false,
+    clusterDisputed: raw.cluster_disputed ?? false,
+    clusterReportCount: raw.cluster_report_count ?? 0,
     allocatedBudget: toNumberOrNull(raw.allocated_budget),
     budgetYear: raw.budget_year ?? null,
     createdAt: raw.created_at ?? "",

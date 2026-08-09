@@ -11,6 +11,8 @@ from app.schemas import (
     PublicComplaintSchema,
     PublicComplaintDetailSchema,
     ReopenComplaintSchema,
+    DepartmentSuggestionSchema,
+    LinkComplaintSchema,
 )
 from app.services import ComplaintService
 from app.utils import validate_images
@@ -23,6 +25,51 @@ complaint_bp = Blueprint(
 
 public_complaint_list_schema = PublicComplaintSchema(many=True)
 public_complaint_detail_schema = PublicComplaintDetailSchema()
+
+
+@complaint_bp.post("/ai/department-suggestion")
+@jwt_required()
+@role_required(UserRole.CITIZEN)
+def suggest_department():
+    try:
+        data = DepartmentSuggestionSchema().load(request.get_json())
+        return jsonify({"success": True, "data": ComplaintService.suggest_department(data)}), 200
+    except ValidationError as err:
+        return jsonify({"success": False, "errors": err.messages}), 422
+
+
+@complaint_bp.post("/<uuid:complaint_id>/cluster/dispute")
+@jwt_required()
+@role_required(UserRole.CITIZEN)
+def dispute_cluster(complaint_id):
+    try:
+        complaint = ComplaintService.dispute_cluster(complaint_id)
+        return jsonify({"success": True, "message": "Grouping disputed.", "data": ComplaintResponseSchema().dump(complaint)}), 200
+    except (ValueError, PermissionError) as err:
+        return jsonify({"success": False, "message": str(err)}), 403
+
+
+@complaint_bp.post("/<uuid:complaint_id>/cluster/link")
+@jwt_required()
+@role_required(UserRole.ADMIN, UserRole.OFFICER)
+def link_complaint(complaint_id):
+    try:
+        data = LinkComplaintSchema().load(request.get_json())
+        complaint = ComplaintService.link_complaint(complaint_id, data["target_complaint_id"])
+        return jsonify({"success": True, "data": ComplaintResponseSchema().dump(complaint)}), 200
+    except (ValueError, PermissionError) as err:
+        return jsonify({"success": False, "message": str(err)}), 400
+
+
+@complaint_bp.post("/<uuid:complaint_id>/cluster/unlink")
+@jwt_required()
+@role_required(UserRole.ADMIN, UserRole.OFFICER)
+def unlink_complaint(complaint_id):
+    try:
+        complaint = ComplaintService.unlink_complaint(complaint_id)
+        return jsonify({"success": True, "data": ComplaintResponseSchema().dump(complaint)}), 200
+    except ValueError as err:
+        return jsonify({"success": False, "message": str(err)}), 400
 
 
 @complaint_bp.get("/public")
