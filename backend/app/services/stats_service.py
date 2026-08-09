@@ -16,18 +16,22 @@ class StatsService:
 
     @staticmethod
     def get_public_stats():
-        total = Complaint.query.count()
+        # Soft-deleted rows are excluded everywhere, so the public counts
+        # match what the rest of the app considers live data.
+        total = Complaint.query.filter(Complaint.deleted_at.is_(None)).count()
 
         resolved = Complaint.query.filter(
+            Complaint.deleted_at.is_(None),
             Complaint.status.in_(
                 [ComplaintStatus.RESOLVED, ComplaintStatus.CLOSED]
-            )
+            ),
         ).count()
 
         resolved_pct = round(resolved / total * 100) if total else 0
 
-        tenders_awarded = Tender.query.filter_by(
-            status=TenderStatus.AWARDED
+        tenders_awarded = Tender.query.filter(
+            Tender.deleted_at.is_(None),
+            Tender.status == TenderStatus.AWARDED,
         ).count()
 
         agencies_total = (
