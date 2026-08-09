@@ -417,15 +417,90 @@ class PublicComplaintSchema(ComplaintResponseSchema):
         exclude = ("citizen_id", "assigned_officer_id")
 
 
+def humanize_status(value):
+    """
+    Turn a ComplaintStatus value into a readable label:
+    "UnderReview" -> "Under Review". Returns None for a falsy value.
+    """
+
+    if not value:
+        return None
+
+    return re.sub(r"(?<!^)(?=[A-Z])", " ", value)
+
+
+class PublicComplaintActivitySchema(Schema):
+    """
+    A public-safe activity entry.
+
+    The authenticated timeline cannot simply be filtered for public use: staff
+    identity appears both in `author_name` AND inside the stored message text
+    ("Allotted to <officer> by the department head.", "<officer> accepted the
+    assignment."), and free-text staff remarks may contain anything at all. So
+    the public timeline is REBUILT rather than filtered — only lifecycle status
+    transitions survive, attribution is dropped, and the message is synthesized
+    from the transition instead of echoing what was stored.
+
+    Never add a field here that reads `obj.remark` or `obj.user`.
+    """
+
+    id = fields.Integer()
+
+    complaint_id = fields.UUID()
+
+    # Public activity is never attributed to a person. "System" matches the
+    # label the authenticated timeline already uses for author-less entries.
+    author_id = fields.Constant(None)
+
+    author_name = fields.Constant("System")
+
+    author_role = fields.Constant(None)
+
+    message = fields.Method("get_message")
+
+    status_from = fields.String(allow_none=True)
+
+    status_to = fields.String(allow_none=True)
+
+    created_at = fields.DateTime()
+
+    def get_message(self, obj):
+        # Deliberately ignores obj.remark — see the class docstring.
+        label = humanize_status(obj.status_to)
+
+        return f"Complaint moved to {label}." if label else "Complaint updated."
+
+
 class PublicComplaintDetailSchema(ComplaintDetailResponseSchema):
     """
     Anonymized single-complaint detail (with images + public activity timeline).
     Same privacy stripping as `PublicComplaintSchema`; the officer's review
     report is staff/authenticated-only, so it's excluded here too.
+
+    The activity timeline is rebuilt through `PublicComplaintActivitySchema`
+    (see `get_remarks` below) — excluding identity FIELDS is not enough, because
+    the stored message text names staff.
     """
 
     class Meta:
         exclude = ("citizen_id", "assigned_officer_id", "review_report")
+
+    def get_remarks(self, obj):
+        """
+        Override the authenticated timeline: keep only lifecycle transitions
+        (entries carrying a `status_to`), which drops every free-text staff
+        remark, and serialize them through the public-safe schema.
+        """
+
+        visible = [
+            remark
+            for remark in obj.remarks
+            if not remark.is_internal and remark.status_to
+        ]
+
+        visible.sort(key=lambda remark: remark.created_at)
+
+        return PublicComplaintActivitySchema(many=True).dump(visible)
 
 
 class AssignComplaintSchema(Schema):
