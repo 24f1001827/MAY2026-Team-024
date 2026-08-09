@@ -34,6 +34,16 @@ function toMapItem(raw: RawPublicComplaint): ComplaintMapItem {
 }
 
 /**
+ * Second line of defence on the public timeline. The backend rebuilds these
+ * entries through `PublicComplaintActivitySchema` (status transitions only, no
+ * attribution), but this surface is unauthenticated, so drop any attribution
+ * that reaches us anyway rather than rendering a staff name to the public.
+ */
+function toPublicRemark(remark: ComplaintRemark): ComplaintRemark {
+  return { ...remark, authorId: null, authorName: "System", authorRole: null }
+}
+
+/**
  * All complaints for the public map, anonymized and enriched with department
  * name. Returns `[]` on any failure so the map still renders.
  */
@@ -66,7 +76,7 @@ export async function fetchPublicComplaint(id: string): Promise<{
     return {
       complaint: { ...normalizeComplaint(raw), citizenId: "" },
       departmentName: raw.department ?? "Unassigned",
-      remarks: normalizeComplaintRemarks(raw),
+      remarks: normalizeComplaintRemarks(raw).map(toPublicRemark),
       images: normalizeComplaintImages(raw),
     }
   } catch {

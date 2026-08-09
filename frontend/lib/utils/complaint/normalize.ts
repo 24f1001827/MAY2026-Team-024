@@ -28,7 +28,7 @@ export interface RawComplaintImage {
 export interface RawComplaintRemark {
   id: number
   complaint_id: string
-  author_id: string
+  author_id: string | null
   author_name?: string | null
   author_role?: string | null
   message: string
@@ -144,7 +144,7 @@ export function normalizeComplaintRemark(
   return {
     id: String(raw.id),
     complaintId: raw.complaint_id,
-    authorId: raw.author_id,
+    authorId: raw.author_id ?? null,
     authorName: raw.author_name ?? "Unknown",
     authorRole: raw.author_role ? normalizeRole(raw.author_role) : null,
     message: raw.message,

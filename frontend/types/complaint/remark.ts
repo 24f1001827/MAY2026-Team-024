@@ -9,7 +9,8 @@ import type { ComplaintStatus } from "./complaint"
 export interface ComplaintRemark {
   id: string
   complaintId: string
-  authorId: string
+  /** Null for system-generated entries, and on the anonymized public timeline. */
+  authorId: string | null
   authorName: string
   /** Null for system-generated entries (auto-assignment, auto transitions). */
   authorRole: UserRole | null
