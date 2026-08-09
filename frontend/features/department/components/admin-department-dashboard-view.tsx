@@ -1,7 +1,17 @@
 "use client"
 
-import { notFound } from "next/navigation"
+import { useState } from "react"
+import { notFound, useRouter } from "next/navigation"
 
+import { Button } from "@/components/shadcn/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/shadcn/dialog"
 import { ApiError } from "@/lib/api/api-client"
 import {
   DepartmentDashboard,
@@ -9,18 +19,25 @@ import {
 } from "@/features/department/components/department-dashboard"
 import {
   useAdminAllotComplaint,
+  useDeleteDepartment,
   useDepartmentDashboard,
 } from "@/hooks/department"
+import { getApiErrorMessage } from "@/lib/api/error-message"
+import { toast } from "@/lib/styles/toast-styles"
+import { routes } from "@/nav"
 import type { Complaint } from "@/types/complaint"
 
 /**
  * Admin per-department dashboard: loads a specific department's dashboard by id
  * and renders it with live allotment via the admin assign endpoint. Admins can
- * allot and manage the record.
+ * allot, edit the record, and delete the department.
  */
 export function AdminDepartmentDashboardView({ id }: { id: number }) {
+  const router = useRouter()
   const { data, isPending, isError, error } = useDepartmentDashboard(id)
   const allot = useAdminAllotComplaint(id)
+  const deleteDepartment = useDeleteDepartment()
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   if (isError && error instanceof ApiError && error.isNotFound) notFound()
 
@@ -40,6 +57,28 @@ export function AdminDepartmentDashboardView({ id }: { id: number }) {
     )
   }
 
+  const departmentName = data.department.name
+
+  function handleDelete() {
+    if (deleteDepartment.isPending) return
+
+    deleteDepartment.mutate(id, {
+      onSuccess: () => {
+        toast.success("Department deleted", {
+          description: `${departmentName} has been removed.`,
+        })
+        setConfirmOpen(false)
+        router.push(routes.departments.href)
+        router.refresh()
+      },
+      onError: (err) => {
+        toast.error("Couldn’t delete department", {
+          description: getApiErrorMessage(err, "Please try again."),
+        })
+      },
+    })
+  }
+
   const officers: DepartmentOfficer[] = data.officers.map((o) => ({
     userId: o.userId,
     name: o.name,
@@ -54,20 +93,51 @@ export function AdminDepartmentDashboardView({ id }: { id: number }) {
   )
 
   return (
-    <DepartmentDashboard
-      department={data.department}
-      officers={officers}
-      queue={queue}
-      myComplaints={[]}
-      totalComplaints={data.complaints.length}
-      manualAllotment={data.manualAllotment}
-      canManage
-      canAllot
-      showMyComplaints={false}
-      onAllot={async (complaintId, officerId) => {
-        await allot.mutateAsync({ complaintId, officerId })
-      }}
-      allotting={allot.isPending}
-    />
+    <>
+      <DepartmentDashboard
+        department={data.department}
+        officers={officers}
+        queue={queue}
+        myComplaints={[]}
+        totalComplaints={data.complaints.length}
+        manualAllotment={data.manualAllotment}
+        canManage
+        canAllot
+        showMyComplaints={false}
+        onAllot={async (complaintId, officerId) => {
+          await allot.mutateAsync({ complaintId, officerId })
+        }}
+        allotting={allot.isPending}
+        onDelete={() => setConfirmOpen(true)}
+        deleting={deleteDepartment.isPending}
+      />
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete department</DialogTitle>
+            <DialogDescription>
+              Delete “{departmentName}”? This can’t be undone from here.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmOpen(false)}
+              disabled={deleteDepartment.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteDepartment.isPending}
+            >
+              {deleteDepartment.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
