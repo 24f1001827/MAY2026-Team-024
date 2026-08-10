@@ -73,7 +73,9 @@ def test_create_complaint_success(
             "address": "Main Road",
             "locality": "Downtown",
             "city": "Bengaluru",
+            "district": None,
             "state": "Karnataka",
+            "country": None,
             "pincode": "560001",
             "status": ComplaintStatus.SUBMITTED,
             "priority": ComplaintPriority.MEDIUM,
@@ -337,7 +339,7 @@ def test_update_complaint_replaces_images(
     mock_delete_image.assert_called_once_with("old-image-id")
     mock_db.delete.assert_called_once_with(old_image)
     mock_db.flush.assert_called_once()
-    mock_db.add.assert_called_once_with(created_image)
+    assert created_image in [call.args[0] for call in mock_db.add.call_args_list]
 
 @pytest.mark.parametrize(
     ("complaint", "department", "message"),

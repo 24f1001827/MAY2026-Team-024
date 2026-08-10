@@ -65,10 +65,12 @@ def test_officer_service_verifies_completed_work_order(mock_officers, mock_order
 
 @patch("app.utils.admin_create.User")
 @patch.dict("os.environ", {"ADMIN_EMAIL":"admin@example.com","ADMIN_PASSWORD":"password"}, clear=True)
-def test_create_admin_skips_when_default_admin_exists(mock_user, capsys):
+def test_create_admin_skips_when_default_admin_exists(mock_user, capsys, app):
     from app.utils.admin_create import create_admin
     mock_user.query.filter_by.return_value.first.return_value=MagicMock()
-    create_admin()
+    with app.app_context(), patch("app.utils.admin_create.inspect") as mock_inspect:
+        mock_inspect.return_value.get_table_names.return_value = ["users"]
+        create_admin()
     assert "Admin already exists" in capsys.readouterr().out
 
 

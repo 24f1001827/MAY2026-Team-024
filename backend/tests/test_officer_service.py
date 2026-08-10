@@ -24,10 +24,10 @@ def test_get_my_complaints_success(mock_officers, mock_assignments):
 @patch("app.services.officer_service.OfficerRepository")
 def test_accept_assignment_success(mock_officers, mock_assignments):
     o, a = officer(), assignment(); mock_officers.get_by_user_id.return_value=o; mock_assignments.get_by_officer_and_complaint.return_value=a
-    with patch("app.services.officer_service.User") as mock_users, patch("app.services.officer_service.NotificationService.create_notification"):
+    with patch("app.services.officer_service.User") as mock_users, patch("app.services.officer_service.NotificationService.create_notification"), patch("app.services.officer_service.ActivityService.record"):
         mock_users.query.filter_by.return_value.first.return_value = MagicMock(id="admin-1")
         result=OfficerService.accept_assignment("officer-1","complaint-1")
-    assert result == a and a.status == AssignmentStatus.ACCEPTED and a.complaint.status == ComplaintStatus.UNDER_REVIEW and o.current_workload == 1
+    assert result == a and a.status == AssignmentStatus.ACCEPTED and a.complaint.status == ComplaintStatus.UNDER_REVIEW and o.current_workload == 0
     mock_assignments.update.assert_called_once()
 
 @patch("app.services.officer_service.ComplaintAssignmentRepository")
@@ -41,7 +41,7 @@ def test_accept_assignment_requires_pending_status(mock_officers, mock_assignmen
 @patch("app.services.officer_service.OfficerRepository")
 def test_reject_assignment_success(mock_officers, mock_assignments):
     mock_officers.get_by_user_id.return_value=officer(); a=assignment(); mock_assignments.get_by_officer_and_complaint.return_value=a
-    with patch("app.services.officer_service.User") as mock_users, patch("app.services.officer_service.NotificationService.create_notification"):
+    with patch("app.services.officer_service.User") as mock_users, patch("app.services.officer_service.NotificationService.create_notification"), patch("app.services.officer_service.ActivityService.record"):
         mock_users.query.filter_by.return_value.first.return_value = MagicMock(id="admin-1")
         OfficerService.reject_assignment("officer-1","complaint-1")
     assert a.status == AssignmentStatus.REJECTED

@@ -17,9 +17,10 @@ def make_user(
     return user
 
 # Citizen registration
+@patch("app.routes.auth.send_citizen_register_email.delay")
 @patch("app.routes.auth.AuthService.register_citizen")
 @patch("app.routes.auth.RegisterCitizenSchema")
-def test_register_citizen_success(mock_schema, mock_register, client):
+def test_register_citizen_success(mock_schema, mock_register, mock_email, client):
     payload = {
         "name": "John Doe",
         "email": "test@example.com",
@@ -94,9 +95,10 @@ def test_register_citizen_server_error(mock_schema, mock_register, client):
     assert body["message"] == "Internal server error."
 
 # Agency registration
+@patch("app.routes.auth.send_agency_register_email.delay")
 @patch("app.routes.auth.AuthService.register_agency")
 @patch("app.routes.auth.RegisterAgencySchema")
-def test_register_agency_success(mock_schema, mock_register, client):
+def test_register_agency_success(mock_schema, mock_register, mock_email, client):
     payload = {
         "name": "City Roads Agency",
         "email": "agency@example.com",
@@ -174,9 +176,10 @@ def test_register_agency_server_error(mock_schema, mock_register, client):
     assert response.get_json()["message"] == "Internal server error."
 
 # Officer registration
+@patch("app.routes.auth.send_officer_register_email.delay")
 @patch("app.routes.auth.AuthService.register_officer")
 @patch("app.routes.auth.RegisterOfficerSchema")
-def test_register_officer_success(mock_schema, mock_register, client):
+def test_register_officer_success(mock_schema, mock_register, mock_email, client):
     payload = {"name": "Officer Bob", "email": "officer@example.com"}
     mock_schema.return_value.load.return_value = payload
     mock_register.return_value = make_user(
