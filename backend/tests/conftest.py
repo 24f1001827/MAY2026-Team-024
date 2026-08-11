@@ -10,6 +10,7 @@ os.environ.setdefault("JWT_SECRET_KEY", "test-jwt-secret-key")
 os.environ.setdefault("DATABASE_URI", "sqlite:///:memory:")
 os.environ.setdefault("GOOGLE_CLIENT_ID", "test-google-client-id")
 os.environ.setdefault("GOOGLE_CLIENT_SECRET", "test-google-client-secret")
+os.environ.setdefault("MAIL_PORT", "587")
 
 from app import create_app
 from app.models import UserRole

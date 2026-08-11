@@ -36,19 +36,23 @@ def test_token_helpers_include_expected_identity_and_claims(mock_access, mock_re
     mock_refresh.assert_called_once_with(identity="1")
 
 @patch.dict("os.environ", {}, clear=True)
-def test_create_admin_requires_environment_credentials():
+def test_create_admin_requires_environment_credentials(app):
     from app.utils.admin_create import create_admin
-    with pytest.raises(ValueError, match="ADMIN_EMAIL"):
-        create_admin()
+    with app.app_context(), patch("app.utils.admin_create.inspect") as mock_inspect:
+        mock_inspect.return_value.get_table_names.return_value = ["users"]
+        with pytest.raises(ValueError, match="ADMIN_EMAIL"):
+            create_admin()
 
 @patch("app.utils.admin_create.User")
 @patch("app.utils.admin_create.db.session")
 @patch("app.utils.admin_create.hash_password", return_value="hashed")
 @patch.dict("os.environ", {"ADMIN_EMAIL": "admin@example.com", "ADMIN_PASSWORD": "password"}, clear=True)
-def test_create_admin_creates_default_admin(mock_hash, mock_db, mock_user):
+def test_create_admin_creates_default_admin(mock_hash, mock_db, mock_user, app):
     from app.utils.admin_create import create_admin
     mock_user.query.filter_by.return_value.first.return_value = None
-    create_admin()
+    with app.app_context(), patch("app.utils.admin_create.inspect") as mock_inspect:
+        mock_inspect.return_value.get_table_names.return_value = ["users"]
+        create_admin()
     mock_user.assert_called_once()
     mock_db.add.assert_called_once()
     mock_db.commit.assert_called_once()

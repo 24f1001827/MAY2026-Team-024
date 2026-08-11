@@ -41,6 +41,7 @@ def test_create_complaint_rejects_non_citizen(client, agency_headers):
 
     assert response.status_code == 403
 
+@patch("app.routes.complaint_route.ComplaintResponseSchema")
 @patch("app.routes.complaint_route.validate_images")
 @patch("app.routes.complaint_route.ComplaintService.create_complaint")
 @patch("app.routes.complaint_route.ComplaintSchema.load")
@@ -48,6 +49,7 @@ def test_create_complaint_success(
     mock_load,
     mock_create,
     mock_validate_images,
+    mock_response_schema,
     client,
     citizen_headers,
 ):
@@ -57,6 +59,10 @@ def test_create_complaint_success(
 
     mock_load.return_value = validated_data
     mock_create.return_value = MagicMock(id=created_id)
+    mock_response_schema.return_value.dump.return_value = {
+        "id": str(created_id),
+        "title": payload["title"],
+    }
 
     response = client.post(
         "/api/v1/complaints",
@@ -68,7 +74,7 @@ def test_create_complaint_success(
     assert response.status_code == 201
     assert body["success"] is True
     assert body["message"] == "Complaint created successfully."
-    assert body["complaint_id"] == str(created_id)
+    assert body["data"]["id"] == str(created_id)
     mock_load.assert_called_once_with(payload)
     mock_validate_images.assert_called_once_with([])
     mock_create.assert_called_once_with(validated_data, [])
@@ -226,7 +232,7 @@ def test_get_complaint_requires_authentication(client, complaint_id):
 
     assert response.status_code == 401
 
-@patch("app.routes.complaint_route.ComplaintResponseSchema")
+@patch("app.routes.complaint_route.ComplaintDetailResponseSchema")
 @patch("app.routes.complaint_route.ComplaintService.get_complaint_by_id")
 def test_get_complaint_success(
     mock_get_complaint,

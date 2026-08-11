@@ -14,14 +14,28 @@ def complaint(status=ComplaintStatus.AWAITING_BUDGET):
     return MagicMock(id="complaint-1", status=status, department_id="roads", department=MagicMock(budget=Decimal("100.00")))
 
 
+@patch("app.services.admin_budget_service.NotificationService.create_notification")
+@patch("app.services.admin_budget_service.BudgetLedgerRepository")
+@patch("app.services.admin_budget_service.ActivityService.record")
+@patch("app.services.admin_budget_service.DepartmentBudgetRepository")
+@patch("app.services.admin_budget_service.ComplaintAssignmentRepository")
 @patch("app.services.admin_budget_service.db.session")
 @patch("app.services.admin_budget_service.ReviewReportRepository")
 @patch("app.services.admin_budget_service.ComplaintRepository")
-def test_allocate_budget_success(mock_complaints, mock_reports, mock_db):
-    item = complaint(); mock_complaints.get_by_id.return_value = item; mock_reports.get_by_complaint_id.return_value = MagicMock()
+@patch("app.services.admin_budget_service.get_jwt_identity", return_value="admin-1")
+def test_allocate_budget_success(mock_identity, mock_complaints, mock_reports, mock_db, mock_assignments, mock_budgets, mock_activity, mock_ledger, mock_notifications):
+    item = complaint()
+    item.citizen_id = "citizen-1"
+    item.title = "Pothole"
+    mock_complaints.get_by_id.return_value = item
+    mock_reports.get_by_complaint_id.return_value = MagicMock()
+    mock_assignments.get_by_complaint_id.return_value = MagicMock(officer_id="officer-1")
+    budget = MagicMock(total_amount=Decimal("100.00"), allocated_amount=Decimal("0"))
+    mock_budgets.get_by_dept_and_year.return_value = budget
     result = AdminBudgetService.allocate_budget("complaint-1", {"amount": Decimal("50.00")})
     assert result == item
-    assert item.department.budget == Decimal("150.00")
+    assert budget.allocated_amount == Decimal("50.00")
+    assert item.allocated_budget == Decimal("50.00")
     assert item.status == ComplaintStatus.BUDGET_ALLOCATED
     assert mock_db.commit.call_count >= 1
 
