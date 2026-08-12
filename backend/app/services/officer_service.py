@@ -34,6 +34,9 @@ from app.services.activity_service import ActivityService
 from app.extensions import db
 
 
+from app.tasks.complaint_task import auto_close_complaint
+
+
 
 class OfficerService:
     """
@@ -868,6 +871,18 @@ class OfficerService:
         )
 
         db.session.commit()
+
+        # --------------------------------
+        # Schedule automatic closure
+        # after 7 days
+        # --------------------------------
+
+
+        auto_close_complaint.apply_async(
+            args=[str(_complaint.id)],
+            # countdown=7 * 24 * 60 * 60,
+            countdown=60,  # For testing purposes, set to 60 seconds
+        )
 
         admin=User.query.filter_by(role=UserRole.ADMIN).first()
 
