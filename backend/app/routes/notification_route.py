@@ -59,7 +59,7 @@ def get_notifications():
             jsonify(
                 {
                     "success": False,
-                    "message": "Failed to retrieve notifications.",
+                    "message": "Internal server error.",
                     "error": str(e),
                 }
             ),
