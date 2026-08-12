@@ -592,3 +592,212 @@ class ComplaintService:
         ComplaintRepository.update()
 
         return complaint
+
+    @staticmethod
+    def auto_close_complaint(complaint_id):
+        """
+        Automatically close a resolved complaint after
+        the 7-day waiting period.
+        """
+
+        complaint = ComplaintRepository.get_by_id(
+            complaint_id
+        )
+
+        if complaint is None:
+            return {
+                "success": False,
+                "message": "Complaint not found.",
+            }
+
+        # --------------------------------
+        # Important:
+        # Do nothing if the complaint is
+        # no longer RESOLVED.
+        # --------------------------------
+
+        if complaint.status != ComplaintStatus.RESOLVED:
+            return {
+                "success": True,
+                "message": "Complaint is no longer resolved.",
+            }
+
+        # --------------------------------
+        # Get work order
+        # --------------------------------
+
+        work_order = WorkOrderRepository.get_by_tender_id(
+            complaint.tender.id,
+        )
+
+        if work_order is None:
+            return {
+                "success": False,
+                "message": "Work order not found.",
+            }
+
+        # --------------------------------
+        # Get assignment
+        # --------------------------------
+
+        assignment = (
+            ComplaintAssignmentRepository
+            .get_by_complaint_id(
+                complaint.id,
+            )
+        )
+
+        if assignment is None:
+            return {
+                "success": False,
+                "message": "Complaint assignment not found.",
+            }
+
+        # --------------------------------
+        # Get officer
+        # --------------------------------
+
+        officer = OfficerRepository.get_by_user_id(
+            assignment.officer_id,
+        )
+
+        # --------------------------------
+        # Get agency
+        # --------------------------------
+
+        agency = AgencyRepository.get_by_user_id(
+            work_order.agency_id,
+        )
+
+        # --------------------------------
+        # Close complaint
+        # --------------------------------
+
+        previous_status = complaint.status
+
+        complaint.status = ComplaintStatus.CLOSED
+
+        # --------------------------------
+        # Close work order
+        # --------------------------------
+
+        work_order.status = WorkOrderStatus.CLOSED
+
+        # --------------------------------
+        # Release officer workload
+        # --------------------------------
+
+        if officer is not None:
+            officer.current_workload = max(
+                0,
+                officer.current_workload - 1,
+            )
+
+        # --------------------------------
+        # Release agency project
+        # --------------------------------
+
+        if agency is not None:
+            agency.current_projects = max(
+                0,
+                agency.current_projects - 1,
+            )
+
+        # --------------------------------
+        # Timeline
+        # --------------------------------
+
+        ActivityService.record(
+            complaint.id,
+            (
+                "Complaint automatically closed by "
+                "the system after 7 days."
+            ),
+            user_id=None,
+            status_from=previous_status,
+            status_to=ComplaintStatus.CLOSED,
+        )
+
+        # --------------------------------
+        # Citizen notification
+        # --------------------------------
+
+        NotificationService.create_notification(
+            {
+                "user_id": complaint.citizen_id,
+                "type": NotificationType.COMPLAINT_CLOSURE,
+                "title": "Complaint Automatically Closed",
+                "message": (
+                    f"Your complaint '{complaint.title}' "
+                    "has been automatically closed because "
+                    "no further action was requested within "
+                    "7 days."
+                ),
+            }
+        )
+
+        # --------------------------------
+        # Officer notification
+        # --------------------------------
+
+        NotificationService.create_notification(
+            {
+                "user_id": assignment.officer_id,
+                "type": NotificationType.COMPLAINT_CLOSURE,
+                "title": "Complaint Automatically Closed",
+                "message": (
+                    f"Complaint '{complaint.title}' "
+                    "has been automatically closed by the system."
+                ),
+            }
+        )
+
+        # --------------------------------
+        # Agency notification
+        # --------------------------------
+
+        NotificationService.create_notification(
+            {
+                "user_id": work_order.agency_id,
+                "type": NotificationType.WORK_ORDER_UPDATED,
+                "title": "Work Order Closed",
+                "message": (
+                    f"The work order for complaint "
+                    f"'{complaint.title}' has been automatically closed."
+                ),
+            }
+        )
+
+        # --------------------------------
+        # Admin notification
+        # --------------------------------
+
+        admins = UserRepository.get_all(
+            role=UserRole.ADMIN,
+        )
+
+        for admin in admins:
+
+            NotificationService.create_notification(
+                {
+                    "user_id": admin.id,
+                    "type": NotificationType.COMPLAINT_CLOSURE,
+                    "title": "Complaint Automatically Closed",
+                    "message": (
+                        f"Complaint '{complaint.title}' "
+                        "has been automatically closed by the system."
+                    ),
+                }
+            )
+
+        # --------------------------------
+        # Commit
+        # --------------------------------
+
+        ComplaintRepository.update()
+
+        return {
+            "success": True,
+            "message": "Complaint automatically closed.",
+            "complaint_id": str(complaint.id),
+        }
