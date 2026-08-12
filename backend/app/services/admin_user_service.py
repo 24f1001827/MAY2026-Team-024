@@ -57,47 +57,66 @@ class AdminUserService:
         user = UserRepository.get_by_id(user_id)
 
         if user is None:
-            raise ValueError("User not found.")
+            raise ValueError(
+                "User not found."
+            )
 
+        if user.role == UserRole.ADMIN:
+            raise PermissionError(
+                "Admin cannot be modified."
+            )
+
+        current_status = user.status
         new_status = data["status"]
 
-        if user.status == new_status:
+        if current_status == new_status:
             raise ValueError(
                 f"User is already {new_status.value.lower()}."
             )
 
-        if user.role ==UserRole.ADMIN:
-            raise PermissionError("Admin cannot be modified.")
+        if current_status == UserStatus.PENDING_APPROVAL:
 
-        # Optional business rules
+            if new_status == UserStatus.BLOCKED:
+                raise ValueError(
+                    "Pending users must be approved or rejected first."
+                )
 
-        if (
-            user.status == UserStatus.PENDING_APPROVAL
-            and new_status == UserStatus.BLOCKED
-        ):
-            raise ValueError(
-                "Pending users must be approved or rejected first."
-            )
+            if new_status not in {
+                UserStatus.ACTIVE,
+                UserStatus.REJECTED,
+            }:
+                raise ValueError(
+                    "Invalid status transition for a pending user."
+                )
 
-        if (
-            user.status == UserStatus.REJECTED
-            and new_status == UserStatus.BLOCKED
-        ):
-            raise ValueError(
-                "Rejected users cannot be blocked."
-            )
-        
-        if (
-            user.status != UserStatus.PENDING_APPROVAL
-            and new_status == UserStatus.PENDING_APPROVAL
-        ):
-            raise ValueError(
-                "Can not change status to pending approval"
-            )
-    
+        elif current_status == UserStatus.REJECTED:
+
+            if new_status == UserStatus.BLOCKED:
+                raise ValueError(
+                    "Rejected users cannot be blocked."
+                )
+
+            if new_status != UserStatus.ACTIVE:
+                raise ValueError(
+                    "Rejected users can only be activated."
+                )
+
+        elif current_status == UserStatus.ACTIVE:
+
+            if new_status != UserStatus.BLOCKED:
+                raise ValueError(
+                    "Active users can only be blocked."
+                )
+
+        elif current_status == UserStatus.BLOCKED:
+
+            if new_status != UserStatus.ACTIVE:
+                raise ValueError(
+                    "Blocked users can only be unblocked."
+                )
 
         user.status = new_status
 
         UserRepository.update()
 
-        return user
+        return user, current_status
