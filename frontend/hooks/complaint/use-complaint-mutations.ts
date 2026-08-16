@@ -70,6 +70,31 @@ export function useCloseComplaint() {
   })
 }
 
+export function useDisputeCluster() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => complaintService.disputeCluster(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: complaintKeys.all }),
+  })
+}
+
+export function useLinkCluster() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, targetComplaintId }: { id: string; targetComplaintId: string }) =>
+      complaintService.linkCluster(id, targetComplaintId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: complaintKeys.all }),
+  })
+}
+
+export function useUnlinkCluster() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => complaintService.unlinkCluster(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: complaintKeys.all }),
+  })
+}
+
 /** Admin: add a remark to a complaint, then refresh its detail (timeline). */
 export function useAddRemark() {
   const qc = useQueryClient()

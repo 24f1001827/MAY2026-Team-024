@@ -236,6 +236,14 @@ class ComplaintResponseSchema(Schema):
 
     ai_priority_score = fields.Integer()
 
+    cluster_id = fields.UUID(allow_none=True)
+
+    is_cluster_primary = fields.Boolean()
+
+    cluster_disputed = fields.Boolean()
+
+    cluster_report_count = fields.Method("get_cluster_report_count")
+
     allocated_budget = fields.Decimal(as_string=True, allow_none=True)
 
     budget_year = fields.String(allow_none=True)
@@ -275,6 +283,9 @@ class ComplaintResponseSchema(Schema):
 
     def get_priority(self, obj):
         return obj.priority.value
+
+    def get_cluster_report_count(self, obj):
+        return len(obj.cluster.complaints) if obj.cluster else 0
 
     def get_assigned_officer_id(self, obj):
         """
@@ -534,3 +545,12 @@ class ReopenComplaintSchema(Schema):
             max=500,
         ),
     )
+
+
+class DepartmentSuggestionSchema(Schema):
+    title = fields.String(required=True, validate=validate.Length(min=5, max=255))
+    description = fields.String(required=True, validate=validate.Length(min=10))
+
+
+class LinkComplaintSchema(Schema):
+    target_complaint_id = fields.UUID(required=True)

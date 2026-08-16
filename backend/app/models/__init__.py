@@ -24,6 +24,7 @@ from .officer import Officer
 from .agency import Agency
 
 from .complaint import Complaint
+from .complaint_cluster import ComplaintCluster
 from .complaint_image import ComplaintImage
 from .complaint_remark import ComplaintRemark
 from .complaint_assignment import ComplaintAssignment

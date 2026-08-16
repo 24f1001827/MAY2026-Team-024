@@ -66,6 +66,10 @@ export interface Complaint {
   country: string
   aiCategory: string | null
   aiPriorityScore: number | null
+  clusterId: string | null
+  isClusterPrimary: boolean
+  clusterDisputed: boolean
+  clusterReportCount: number
   /** Budget committed to this complaint, set on allocation; null until then. */
   allocatedBudget: number | null
   /** Financial year the budget was drawn from (e.g. "2026-27"). */

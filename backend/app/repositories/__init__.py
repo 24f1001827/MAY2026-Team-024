@@ -6,6 +6,7 @@ from .department_budget_repository import DepartmentBudgetRepository
 from .budget_ledger_repository import BudgetLedgerRepository
 from .complaint_image_repository import ComplaintImageRepository
 from .complaint_repository import ComplaintRepository
+from .complaint_cluster_repository import ComplaintClusterRepository
 from .complaint_assignment_repository import ComplaintAssignmentRepository
 from .review_report_repository import ReviewReportRepository
 from .tender_repository import TenderRepository

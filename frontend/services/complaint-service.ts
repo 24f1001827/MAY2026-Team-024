@@ -38,6 +38,13 @@ interface Envelope<T> {
   data: T
 }
 
+export interface DepartmentSuggestion {
+  department_id: number | null
+  department_name: string | null
+  confidence: number
+  reason: string
+}
+
 /** A complaint plus its images and activity timeline (detail view). */
 export interface ComplaintWithImages {
   complaint: Complaint
@@ -106,6 +113,25 @@ export const complaintService = {
       toFormData(input, images),
     )
     return normalizeComplaint(res.data)
+  },
+
+  async suggestDepartment(title: string, description: string): Promise<DepartmentSuggestion> {
+    const res = await api.post<Envelope<DepartmentSuggestion>>(
+      "/complaints/ai/department-suggestion", { title, description },
+    )
+    return res.data
+  },
+
+  async disputeCluster(id: string): Promise<void> {
+    await api.post(`/complaints/${id}/cluster/dispute`, {})
+  },
+
+  async linkCluster(id: string, targetComplaintId: string): Promise<void> {
+    await api.post(`/complaints/${id}/cluster/link`, { target_complaint_id: targetComplaintId })
+  },
+
+  async unlinkCluster(id: string): Promise<void> {
+    await api.post(`/complaints/${id}/cluster/unlink`, {})
   },
 
   /** Citizen: update an existing complaint (optionally replacing images). */

@@ -6,7 +6,8 @@ from app.repositories import (
     WorkOrderRepository,
     ComplaintAssignmentRepository,
     AgencyRepository,
-    OfficerRepository
+    OfficerRepository,
+    ComplaintClusterRepository,
 )
 
 from app.models import (
@@ -26,6 +27,8 @@ from app.utils import upload_image, delete_image
 from app.services.notification_service import NotificationService
 from app.services.settings_service import SettingsService
 from app.services.activity_service import ActivityService
+from app.services.complaint_intelligence_service import ComplaintIntelligenceService
+from sqlalchemy import text
 
 
 class ComplaintService:
@@ -106,6 +109,77 @@ class ComplaintService:
         return department
 
     @staticmethod
+    def suggest_department(data):
+        """Return a non-binding department recommendation for the form."""
+        return ComplaintIntelligenceService.suggest_department(
+            data["title"], data["description"], DepartmentRepository.get_all()
+        )
+
+    @staticmethod
+    def _lock_cluster_bucket(complaint):
+        """Serialize same-area grouping on PostgreSQL without a long AI transaction."""
+        if db.session.bind.dialect.name == "postgresql":
+            bucket = f"{complaint.locality.lower()}:{complaint.city.lower()}"
+            db.session.execute(text("SELECT pg_advisory_xact_lock(hashtext(:bucket))"), {"bucket": bucket})
+
+    @staticmethod
+    def _refresh_cluster(cluster):
+        members = ComplaintRepository.get_cluster_members(cluster.id)
+        score = ComplaintIntelligenceService.cluster_score(cluster.base_priority_score, members)
+        priority = ComplaintIntelligenceService.priority_from_score(score)
+        cluster.ai_priority_score = score
+        cluster.priority = priority
+        for member in members:
+            member.priority = priority
+            member.ai_priority_score = score
+
+    @staticmethod
+    def notify_cluster_citizens(complaint, status, exclude_citizen_id=None):
+        """Send one status notification to every distinct reporter in the issue."""
+        members = ComplaintRepository.get_cluster_members(complaint.cluster_id) if complaint.cluster_id else [complaint]
+        recipients = {member.citizen_id for member in members if member.citizen_id}
+        recipients.discard(exclude_citizen_id)
+        for citizen_id in recipients:
+            NotificationService.create_notification({
+                "user_id": citizen_id,
+                "type": NotificationType.STATUS_CHANGE,
+                "title": "Related complaint updated",
+                "message": f"The reported issue related to '{complaint.title}' is now {status.value}.",
+            })
+
+    @staticmethod
+    def _cluster_complaint(complaint):
+        """Attach to the closest high-confidence issue, or start a new issue."""
+        ComplaintService._lock_cluster_bucket(complaint)
+        candidates = ComplaintRepository.get_cluster_candidates(
+            complaint.locality, complaint.city, complaint.latitude, complaint.longitude, complaint.id
+        )
+        best = max(candidates, key=lambda item: ComplaintIntelligenceService.similarity(complaint, item), default=None)
+        if best and ComplaintIntelligenceService.similarity(complaint, best) >= 0.68:
+            complaint.cluster_id = best.cluster_id
+            complaint.is_cluster_primary = False
+            cluster = best.cluster or ComplaintClusterRepository.get_by_id(best.cluster_id)
+            if not cluster:
+                raise ValueError("Cluster not found for candidate complaint.")
+        else:
+            cluster = ComplaintClusterRepository.create({
+                "category": complaint.ai_category,
+                "priority": complaint.priority,
+                "ai_priority_score": complaint.ai_priority_score,
+                "base_priority_score": complaint.ai_priority_score,
+                "latitude": complaint.latitude,
+                "longitude": complaint.longitude,
+                "locality": complaint.locality,
+                "city": complaint.city,
+            })
+            db.session.flush()
+            complaint.cluster_id = cluster.id
+            complaint.is_cluster_primary = True
+        db.session.flush()
+        ComplaintService._refresh_cluster(cluster)
+        return cluster
+
+    @staticmethod
     def create_complaint(data, images):
         """
         Create a new complaint.
@@ -147,6 +221,14 @@ class ComplaintService:
             )
 
             db.session.flush()
+
+            category, base_score = ComplaintIntelligenceService.classify(
+                complaint.title, complaint.description
+            )
+            complaint.ai_category = category
+            complaint.ai_priority_score = base_score
+            complaint.priority = ComplaintIntelligenceService.priority_from_score(base_score)
+            ComplaintService._cluster_complaint(complaint)
 
             ActivityService.record(
                 complaint.id,
@@ -226,6 +308,70 @@ class ComplaintService:
         complaints = ComplaintRepository.get_by_citizen_id(user.id)
 
         return complaints
+
+    @staticmethod
+    def dispute_cluster(complaint_id):
+        user_id = get_jwt_identity()
+        complaint = ComplaintRepository.get_by_id(complaint_id)
+        if not complaint:
+            raise ValueError("Complaint not found.")
+        if complaint.citizen_id != user_id:
+            raise PermissionError("You are not authorized to dispute this grouping.")
+        complaint.cluster_disputed = True
+        db.session.commit()
+        return complaint
+
+    @staticmethod
+    def link_complaint(complaint_id, target_complaint_id):
+        """Staff override: add a complaint to the target complaint's incident."""
+        actor = UserRepository.get_by_id(get_jwt_identity())
+        complaint = ComplaintRepository.get_by_id(complaint_id)
+        target = ComplaintRepository.get_by_id(target_complaint_id)
+        if not complaint or not target:
+            raise ValueError("Complaint not found.")
+        if complaint.id == target.id:
+            raise ValueError("A complaint cannot be linked to itself.")
+        if actor.role == UserRole.OFFICER:
+            officer = OfficerRepository.get_by_user_id(actor.id)
+            if not officer or complaint.department_id != officer.department_id or target.department_id != officer.department_id:
+                raise PermissionError("Officers can link complaints only within their department.")
+        if not target.cluster_id:
+            ComplaintService._cluster_complaint(target)
+        old_cluster = complaint.cluster
+        complaint.cluster_id = target.cluster_id
+        complaint.is_cluster_primary = False
+        complaint.cluster_disputed = False
+        ComplaintService._refresh_cluster(target.cluster)
+        if old_cluster and old_cluster.id != target.cluster_id:
+            remaining = ComplaintRepository.get_cluster_members(old_cluster.id)
+            if remaining:
+                if not any(item.is_cluster_primary for item in remaining):
+                    remaining[0].is_cluster_primary = True
+                ComplaintService._refresh_cluster(old_cluster)
+            else:
+                old_cluster.deleted_at = complaint.updated_at
+        db.session.commit()
+        return complaint
+
+    @staticmethod
+    def unlink_complaint(complaint_id):
+        actor = UserRepository.get_by_id(get_jwt_identity())
+        complaint = ComplaintRepository.get_by_id(complaint_id)
+        if not complaint:
+            raise ValueError("Complaint not found.")
+        old_cluster = complaint.cluster
+        if not old_cluster or complaint.is_cluster_primary:
+            raise ValueError("The primary complaint cannot be unlinked.")
+        if actor.role == UserRole.OFFICER:
+            officer = OfficerRepository.get_by_user_id(actor.id)
+            if not officer or complaint.department_id != officer.department_id:
+                raise PermissionError("Officers can unlink complaints only within their department.")
+        complaint.cluster_id = None
+        complaint.cluster_disputed = False
+        ComplaintService._cluster_complaint(complaint)
+        ComplaintService._refresh_cluster(old_cluster)
+        db.session.commit()
+        return complaint
 
     @staticmethod
     def add_remark(complaint_id, message):
@@ -433,6 +579,7 @@ class ComplaintService:
 
         previous_status = complaint.status
         complaint.status = ComplaintStatus.REOPENED
+        ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.REOPENED)
 
         ActivityService.record(
             complaint.id,
@@ -517,6 +664,7 @@ class ComplaintService:
         )
 
         complaint.status = ComplaintStatus.CLOSED
+        ComplaintService.notify_cluster_citizens(complaint, ComplaintStatus.CLOSED, complaint.citizen_id)
 
         work_order.status = WorkOrderStatus.CLOSED
 

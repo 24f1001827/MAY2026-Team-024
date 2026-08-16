@@ -2,7 +2,7 @@ from app.extensions import db
 from app.models.complaint import Complaint
 from datetime import datetime, timedelta
 from app.models import IST
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 
 class ComplaintRepository:
     """
@@ -80,6 +80,24 @@ class ComplaintRepository:
             .order_by(Complaint.created_at.desc())
             .all()
         )
+
+    @staticmethod
+    def get_cluster_members(cluster_id):
+        return Complaint.query.filter_by(cluster_id=cluster_id, deleted_at=None).all()
+
+    @staticmethod
+    def get_cluster_candidates(locality, city, latitude, longitude, exclude_id=None):
+        """Cheap geographical prefilter before semantic comparison."""
+        query = Complaint.query.filter(
+            Complaint.deleted_at.is_(None),
+            Complaint.cluster_id.isnot(None),
+            Complaint.locality.ilike(locality),
+            Complaint.city.ilike(city),
+        )
+        if exclude_id is not None:
+            query = query.filter(Complaint.id != exclude_id)
+        # Candidate reports are deliberately limited; semantic matching happens in service.
+        return query.order_by(Complaint.created_at.desc()).limit(100).all()
 
     @staticmethod
     def update():
