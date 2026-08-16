@@ -8,9 +8,10 @@ import json
 import os
 import re
 import requests
-
+import logging
 from app.models import ComplaintPriority
 
+logger = logging.getLogger(__name__)
 
 class ComplaintIntelligenceService:
     GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
@@ -86,8 +87,27 @@ Complaint description: {description!r}"""
                 timeout=12,
             )
             response.raise_for_status()
-            text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+            payload = response.json()
+            candidates = payload.get("candidates")
+            if not candidates:
+                logger.warning("Gemini response missing candidates: %s", payload)
+                return None
+            content = candidates[0].get("content", {})
+            parts = content.get("parts", [])
+            text = next(
+                (part.get("text") for part in parts if isinstance(part, dict) and part.get("text")),
+                None,
+            )
+            if not text:
+                logger.warning("Gemini response missing text: %s", payload)
+                return None
             result = json.loads(text)
+            if not isinstance(result, dict):
+                logger.warning("Gemini returned non-object JSON: %s", result)
+                return None
+            if "category" not in result or "priority_score" not in result:
+                logger.warning("Gemini response missing required fields: %s", result)
+                return None
             score = int(result["priority_score"])
             confidence = int(result.get("confidence", 0))
             category = str(result["category"]).strip()[:100]

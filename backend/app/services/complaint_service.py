@@ -137,7 +137,7 @@ class ComplaintService:
     def notify_cluster_citizens(complaint, status, exclude_citizen_id=None):
         """Send one status notification to every distinct reporter in the issue."""
         members = ComplaintRepository.get_cluster_members(complaint.cluster_id) if complaint.cluster_id else [complaint]
-        recipients = {member.citizen_id for member in members}
+        recipients = {member.citizen_id for member in members if member.citizen_id}
         recipients.discard(exclude_citizen_id)
         for citizen_id in recipients:
             NotificationService.create_notification({
@@ -158,7 +158,9 @@ class ComplaintService:
         if best and ComplaintIntelligenceService.similarity(complaint, best) >= 0.68:
             complaint.cluster_id = best.cluster_id
             complaint.is_cluster_primary = False
-            cluster = best.cluster
+            cluster = best.cluster or ComplaintClusterRepository.get_by_id(best.cluster_id)
+            if not cluster:
+                raise ValueError("Cluster not found for candidate complaint.")
         else:
             cluster = ComplaintClusterRepository.create({
                 "category": complaint.ai_category,
