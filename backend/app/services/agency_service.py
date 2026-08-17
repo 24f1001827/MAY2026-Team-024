@@ -195,7 +195,7 @@ class AgencyService:
         status = data["status"]
 
         if (
-            (work_order.status == WorkOrderStatus.ASSIGNED)
+            (work_order.status == WorkOrderStatus.ASSIGNED or work_order.status == WorkOrderStatus.INCOMPLETE)
             and status == WorkOrderStatus.IN_PROGRESS
         ):
             work_order.status = WorkOrderStatus.IN_PROGRESS
@@ -238,7 +238,7 @@ class AgencyService:
             )
 
         elif (
-            work_order.status == WorkOrderStatus.IN_PROGRESS or work_order.status == WorkOrderStatus.INCOMPLETE
+            (work_order.status == WorkOrderStatus.IN_PROGRESS or work_order.status == WorkOrderStatus.INCOMPLETE)
             and status == WorkOrderStatus.COMPLETED
         ):
             if completion_proof is None:

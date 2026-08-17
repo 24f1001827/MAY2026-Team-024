@@ -108,16 +108,51 @@ def update_user_status(user_id):
             request.get_json()
         )
 
-        user = AdminUserService.update_user_status(
+        user, old_status = AdminUserService.update_user_status(
             user_id,
             data,
         )
 
-        if user.role==UserRole.AGENCY:
-            send_agency_approve_email.delay("Agency approved",[user.email],user.name,user.updated_at,user.status.value)
-        elif user.role==UserRole.OFFICER:
-            send_officer_approve_email.delay("Officer account approved",[user.email],user.name,user.officer.department.name,user.updated_at,user.status.value)
+        new_status = user.status
 
+        if (
+            old_status in {
+                UserStatus.PENDING_APPROVAL,
+                UserStatus.REJECTED,
+            }
+            and new_status == UserStatus.ACTIVE
+        ):
+
+            if user.role == UserRole.AGENCY:
+
+                send_agency_approve_email.delay(
+                    "Agency account approved",
+                    [user.email],
+                    user.name,
+                    user.updated_at,
+                    user.status.value,
+                )
+
+            elif user.role == UserRole.OFFICER:
+
+                department_name = None
+
+                if (
+                    user.officer
+                    and user.officer.department
+                ):
+                    department_name = (
+                        user.officer.department.name
+                    )
+
+                send_officer_approve_email.delay(
+                    "Officer account approved",
+                    [user.email],
+                    user.name,
+                    department_name,
+                    user.updated_at,
+                    user.status.value,
+                )
 
         return (
             jsonify(
@@ -152,20 +187,20 @@ def update_user_status(user_id):
                     "message": str(e),
                 }
             ),
-            404,
+            400,
         )
 
     except PermissionError as e:
-    
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "message": str(e),
-                    }
-                ),
-                403,
-            )
+
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(e),
+                }
+            ),
+            403,
+        )
 
     except Exception as err:
 
@@ -174,13 +209,11 @@ def update_user_status(user_id):
                 {
                     "success": False,
                     "message": "Internal server error.",
-                    "error":str(err)
-
+                    "error": str(err),
                 }
             ),
             500,
         )
-
 
 @admin_user_bp.patch("/<uuid:user_id>/max-workload")
 @jwt_required()

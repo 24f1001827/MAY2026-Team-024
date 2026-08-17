@@ -241,12 +241,13 @@ def accept_assignment(complaint_id):
             400,
         )
 
-    except Exception:
+    except Exception as err:
         return (
             jsonify(
                 {
                     "success": False,
                     "message": "Internal server error.",
+                    "error": str(err),
                 }
             ),
             500,
@@ -290,12 +291,13 @@ def reject_assignment(complaint_id):
             400,
         )
 
-    except Exception:
+    except Exception as err:
         return (
             jsonify(
                 {
                     "success": False,
-                    "message": "Failed to reject complaint assignment.",
+                    "message": "Internal server error.",
+                    "error": str(err),
                 }
             ),
             500,
