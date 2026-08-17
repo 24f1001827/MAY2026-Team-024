@@ -34,6 +34,7 @@ from app.extensions import db
 
 
 from app.tasks.complaint_task import auto_close_complaint
+from flask import current_app
 
 
 
@@ -871,10 +872,14 @@ class OfficerService:
         # --------------------------------
 
 
+        countdown_seconds = current_app.config.get(
+                "COMPLAINT_AUTO_CLOSE_SECONDS",
+                7 * 24 * 60 * 60
+            )
+
         auto_close_complaint.apply_async(
             args=[str(_complaint.id)],
-            # countdown=7 * 24 * 60 * 60,
-            countdown=60,  # For testing purposes, set to 60 seconds
+            countdown=countdown_seconds
         )
 
         admin=User.query.filter_by(role=UserRole.ADMIN).first()
