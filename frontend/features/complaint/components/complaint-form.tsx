@@ -95,6 +95,21 @@ export function ComplaintForm({
       toast.error("Add a title and description first")
       return
     }
+
+    console.log("[department-suggestion] requested", {
+      titleLength: title.length,
+      descriptionLength: description.length,
+    })
+
+    const result = await complaintService.suggestDepartment(title, description)
+
+    console.log("[department-suggestion] result", {
+      departmentId: result?.department_id ?? null,
+      departmentName: result?.department_name ?? null,
+      confidence: result?.confidence ?? null,
+      reason: result?.reason ?? null,
+    })
+
     setSuggesting(true)
     try {
       const result = await complaintService.suggestDepartment(title, description)
@@ -228,11 +243,11 @@ export function ComplaintForm({
               defaultValue={complaint?.departmentId ?? ""}
               aria-busy={departmentsLoading}
             >
-              <option value="" disabled>
+              <option value="" disabled className="bg-background text-foreground">
                 {departmentsLoading ? "Loading departments…" : "Select a department"}
               </option>
               {departments?.map((department) => (
-                <option key={department.id} value={department.id}>
+                <option key={department.id} value={department.id} className="bg-background text-foreground">
                   {department.name}
                 </option>
               ))}
