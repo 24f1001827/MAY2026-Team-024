@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from marshmallow import ValidationError
-from flask_jwt_extended import jwt_required,get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app.models import UserRole
 from app.middleware import role_required
@@ -16,6 +16,10 @@ from app.schemas import (
 )
 from app.services import ComplaintService
 from app.utils import validate_images
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 complaint_bp = Blueprint(
     "complaint",
@@ -33,7 +37,25 @@ public_complaint_detail_schema = PublicComplaintDetailSchema()
 def suggest_department():
     try:
         data = DepartmentSuggestionSchema().load(request.get_json())
-        return jsonify({"success": True, "data": ComplaintService.suggest_department(data)}), 200
+        logger.info(
+            "[department-suggestion] request accepted title_length=%d description_length=%d",
+            len(data["title"]),
+            len(data["description"]),
+        )
+        print(data)
+
+        result = ComplaintService.suggest_department(data)
+        logger.info(
+            "[department-suggestion] response department_id=%s department_name=%s confidence=%s",
+            result["department_id"],
+            result["department_name"],
+            result["confidence"],
+        )
+        return (
+            jsonify({"success": True, "data": result}),
+            200,
+        )
+
     except ValidationError as err:
         return jsonify({"success": False, "errors": err.messages}), 422
 
@@ -44,7 +66,16 @@ def suggest_department():
 def dispute_cluster(complaint_id):
     try:
         complaint = ComplaintService.dispute_cluster(complaint_id)
-        return jsonify({"success": True, "message": "Grouping disputed.", "data": ComplaintResponseSchema().dump(complaint)}), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Grouping disputed.",
+                    "data": ComplaintResponseSchema().dump(complaint),
+                }
+            ),
+            200,
+        )
     except (ValueError, PermissionError) as err:
         return jsonify({"success": False, "message": str(err)}), 403
 
@@ -55,8 +86,15 @@ def dispute_cluster(complaint_id):
 def link_complaint(complaint_id):
     try:
         data = LinkComplaintSchema().load(request.get_json())
-        complaint = ComplaintService.link_complaint(complaint_id, data["target_complaint_id"])
-        return jsonify({"success": True, "data": ComplaintResponseSchema().dump(complaint)}), 200
+        complaint = ComplaintService.link_complaint(
+            complaint_id, data["target_complaint_id"]
+        )
+        return (
+            jsonify(
+                {"success": True, "data": ComplaintResponseSchema().dump(complaint)}
+            ),
+            200,
+        )
     except (ValueError, PermissionError) as err:
         return jsonify({"success": False, "message": str(err)}), 400
 
@@ -67,7 +105,12 @@ def link_complaint(complaint_id):
 def unlink_complaint(complaint_id):
     try:
         complaint = ComplaintService.unlink_complaint(complaint_id)
-        return jsonify({"success": True, "data": ComplaintResponseSchema().dump(complaint)}), 200
+        return (
+            jsonify(
+                {"success": True, "data": ComplaintResponseSchema().dump(complaint)}
+            ),
+            200,
+        )
     except ValueError as err:
         return jsonify({"success": False, "message": str(err)}), 400
 

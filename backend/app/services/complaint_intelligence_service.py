@@ -34,6 +34,7 @@ class ComplaintIntelligenceService:
         if analysis and analysis.get("department_name"):
             matched = next((d for d in departments if d.name.casefold() == analysis["department_name"].casefold()), None)
             if matched:
+                logger.info("[department-suggestion] source=gemini department=%s", matched.name)
                 return {
                     "department_id": matched.id,
                     "department_name": matched.name,
@@ -67,26 +68,39 @@ class ComplaintIntelligenceService:
         """Use Gemini when configured; malformed/failed responses fall back safely."""
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
+            logger.warning("[department-suggestion] Gemini skipped: GEMINI_API_KEY is missing or empty")
             return None
+
+        logger.info(
+            "[department-suggestion] Gemini request model=%s departments=%d",
+            os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+            len(departments),
+        )
+        
         department_names = [department.name for department in departments]
         prompt = f"""You triage civic complaints. Return JSON only, with keys category,
 priority_score, department_name, confidence, and reason. priority_score is an integer
 0-100 based on public safety, service disruption, vulnerable locations, and scale.
 department_name must be one of {department_names!r} or null. Never treat reporting
 volume as severity. category is a concise issue category, max 100 characters.
+confidence must be an integer from 0 to 100.If department_name is not null, confidence must be at least 1.
+Use 0 only when department_name is null.
 Complaint title: {title!r}
 Complaint description: {description!r}"""
         try:
             response = requests.post(
                 cls.GEMINI_URL.format(model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash")),
-                params={"key": api_key},
+                headers={"x-goog-api-key": api_key},
                 json={
                     "contents": [{"parts": [{"text": prompt}]}],
                     "generationConfig": {"responseMimeType": "application/json", "temperature": 0.1},
                 },
-                timeout=12,
+                timeout=(5, 40),
             )
             response.raise_for_status()
+
+            logger.info("[department-suggestion] Gemini responded status=%d", response.status_code)
+
             payload = response.json()
             candidates = payload.get("candidates")
             if not candidates:
@@ -120,7 +134,9 @@ Complaint description: {description!r}"""
                 "confidence": confidence,
                 "reason": str(result.get("reason", "Gemini classification."))[:300],
             }
-        except (requests.RequestException, KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError):
+        
+        except (requests.RequestException, KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            logger.warning("[department-suggestion] Gemini failed; using fallback: %s", exc)
             return None
 
     @classmethod

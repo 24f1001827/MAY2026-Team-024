@@ -118,7 +118,7 @@ class ComplaintService:
     @staticmethod
     def _lock_cluster_bucket(complaint):
         """Serialize same-area grouping on PostgreSQL without a long AI transaction."""
-        if db.session.bind.dialect.name == "postgresql":
+        if db.engine.dialect.name == "postgresql":
             bucket = f"{complaint.locality.lower()}:{complaint.city.lower()}"
             db.session.execute(text("SELECT pg_advisory_xact_lock(hashtext(:bucket))"), {"bucket": bucket})
 
