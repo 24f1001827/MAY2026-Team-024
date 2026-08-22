@@ -72,6 +72,8 @@ export interface RawComplaint {
   is_cluster_primary?: boolean
   cluster_disputed?: boolean
   cluster_report_count?: number
+  cluster_primary_id?: string | null
+  cluster_primary_title?: string | null
   latitude?: number | string | null
   longitude?: number | string | null
   address: string
@@ -133,6 +135,8 @@ export function normalizeComplaint(raw: RawComplaint): Complaint {
     isClusterPrimary: raw.is_cluster_primary ?? false,
     clusterDisputed: raw.cluster_disputed ?? false,
     clusterReportCount: raw.cluster_report_count ?? 0,
+    clusterPrimaryId: raw.cluster_primary_id ?? null,
+    clusterPrimaryTitle: raw.cluster_primary_title ?? null,
     allocatedBudget: toNumberOrNull(raw.allocated_budget),
     budgetYear: raw.budget_year ?? null,
     createdAt: raw.created_at ?? "",

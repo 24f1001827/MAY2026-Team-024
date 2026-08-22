@@ -239,6 +239,16 @@ export function ComplaintDetail({
                   {complaint.isClusterPrimary && " · primary report"}
                   {complaint.clusterDisputed && " · grouping disputed"}
                 </DetailRow>
+                {!complaint.isClusterPrimary && complaint.clusterPrimaryId && complaint.clusterPrimaryTitle && (
+                  <DetailRow icon={ClipboardIcon} label="Linked report">
+                    <Link
+                      className="text-primary underline-offset-4 hover:underline"
+                      href={routes.complaints.detail(complaint.clusterPrimaryId).href}
+                    >
+                      {complaint.clusterPrimaryTitle}
+                    </Link>
+                  </DetailRow>
+                )}
                 {complaint.allocatedBudget != null && (
                   <DetailRow icon={Wallet01Icon} label="Allocated budget">
                     {formatCurrency(complaint.allocatedBudget)}
