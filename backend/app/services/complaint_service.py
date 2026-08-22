@@ -1,3 +1,5 @@
+import os
+
 from app.repositories import (
     UserRepository,
     DepartmentRepository,
@@ -152,15 +154,25 @@ class ComplaintService:
         """Attach to the closest high-confidence issue, or start a new issue."""
         ComplaintService._lock_cluster_bucket(complaint)
         candidates = ComplaintRepository.get_cluster_candidates(
-            complaint.locality, complaint.city, complaint.latitude, complaint.longitude, complaint.id
+            complaint.locality.strip().lower(), complaint.city.strip().lower(), complaint.pincode.strip(), complaint.id,
+            limit=int(os.getenv("DUPLICATE_MAX_CANDIDATES", "20")),
         )
-        best = max(candidates, key=lambda item: ComplaintIntelligenceService.similarity(complaint, item), default=None)
-        if best and ComplaintIntelligenceService.similarity(complaint, best) >= 0.68:
+        candidates = [item for item in candidates if ComplaintIntelligenceService.passes_distance_filter(complaint, item)]
+        scored = [(ComplaintIntelligenceService.duplicate_score(complaint, item), item) for item in candidates]
+        scored = [(score, item) for score, item in scored if score is not None]
+        best_score, best = max(scored, default=(None, None), key=lambda item: item[0])
+        if best and best_score >= ComplaintIntelligenceService.duplicate_threshold():
             complaint.cluster_id = best.cluster_id
             complaint.is_cluster_primary = False
             cluster = best.cluster or ComplaintClusterRepository.get_by_id(best.cluster_id)
             if not cluster:
                 raise ValueError("Cluster not found for candidate complaint.")
+            NotificationService.create_notification({
+                "user_id": complaint.citizen_id,
+                "type": NotificationType.STATUS_CHANGE,
+                "title": "Report linked to an existing issue",
+                "message": f"Your report was grouped with the primary report '{best.title}'. You can view it or dispute the grouping.",
+            })
         else:
             cluster = ComplaintClusterRepository.create({
                 "category": complaint.ai_category,

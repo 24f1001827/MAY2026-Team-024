@@ -102,6 +102,10 @@ class Complaint(BaseModel):
         nullable=False,
     )
 
+    # Persisted provider-generated vector used only for duplicate detection.
+    # JSON keeps this deployment-neutral; pgvector can replace it when needed.
+    semantic_embedding = db.Column(db.JSON, nullable=True)
+
     cluster_id = db.Column(
         db.UUID(as_uuid=True),
         db.ForeignKey("complaint_clusters.id"),

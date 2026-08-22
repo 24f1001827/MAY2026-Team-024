@@ -86,18 +86,18 @@ class ComplaintRepository:
         return Complaint.query.filter_by(cluster_id=cluster_id, deleted_at=None).all()
 
     @staticmethod
-    def get_cluster_candidates(locality, city, latitude, longitude, exclude_id=None):
-        """Cheap geographical prefilter before semantic comparison."""
+    def get_cluster_candidates(locality, city, pincode, exclude_id=None, limit=100):
+        """Return reports in the same normalized locality and pincode."""
         query = Complaint.query.filter(
             Complaint.deleted_at.is_(None),
             Complaint.cluster_id.isnot(None),
-            Complaint.locality.ilike(locality),
-            Complaint.city.ilike(city),
+            db.func.lower(db.func.trim(Complaint.locality)) == locality,
+            db.func.lower(db.func.trim(Complaint.city)) == city,
+            db.func.trim(Complaint.pincode) == pincode,
         )
         if exclude_id is not None:
             query = query.filter(Complaint.id != exclude_id)
-        # Candidate reports are deliberately limited; semantic matching happens in service.
-        return query.order_by(Complaint.created_at.desc()).limit(100).all()
+        return query.order_by(Complaint.created_at.desc()).limit(limit).all()
 
     @staticmethod
     def update():

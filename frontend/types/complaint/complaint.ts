@@ -70,6 +70,8 @@ export interface Complaint {
   isClusterPrimary: boolean
   clusterDisputed: boolean
   clusterReportCount: number
+  clusterPrimaryId: string | null
+  clusterPrimaryTitle: string | null
   /** Budget committed to this complaint, set on allocation; null until then. */
   allocatedBudget: number | null
   /** Financial year the budget was drawn from (e.g. "2026-27"). */

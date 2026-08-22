@@ -104,9 +104,21 @@ MAIL_USERNAME=
 MAIL_PASSWORD=
 MAIL_DEFAULT_SENDER=
 
-# Gemini complaint triage (free tier supported)
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-2.5-flash
+# Provider-agnostic LangChain complaint intelligence
+LLM_PROVIDER=google
+LLM_MODEL=gemini-2.5-flash
+GOOGLE_API_KEY=your_google_api_key
+EMBEDDING_PROVIDER=google
+EMBEDDING_MODEL=models/gemini-embedding-001
+
+# Duplicate grouping: same normalized pincode/locality first, then hard distance
+# filtering, then embedding cosine similarity.
+DUPLICATE_EMBEDDING_THRESHOLD=0.84
+DUPLICATE_DISTANCE_MODE=hard_filter
+DUPLICATE_MAX_DISTANCE_METERS=150
+DUPLICATE_DISTANCE_SCORE_RADIUS_METERS=250
+DUPLICATE_DISTANCE_WEIGHT=0.15
+DUPLICATE_MAX_CANDIDATES=20
 ```
 
 ---

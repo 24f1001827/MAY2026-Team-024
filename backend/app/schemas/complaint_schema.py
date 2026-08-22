@@ -244,6 +244,10 @@ class ComplaintResponseSchema(Schema):
 
     cluster_report_count = fields.Method("get_cluster_report_count")
 
+    cluster_primary_id = fields.Method("get_cluster_primary_id")
+
+    cluster_primary_title = fields.Method("get_cluster_primary_title")
+
     allocated_budget = fields.Decimal(as_string=True, allow_none=True)
 
     budget_year = fields.String(allow_none=True)
@@ -286,6 +290,14 @@ class ComplaintResponseSchema(Schema):
 
     def get_cluster_report_count(self, obj):
         return len(obj.cluster.complaints) if obj.cluster else 0
+
+    def get_cluster_primary_id(self, obj):
+        primary = next((complaint for complaint in (obj.cluster.complaints if obj.cluster else []) if complaint.is_cluster_primary), None)
+        return str(primary.id) if primary else None
+
+    def get_cluster_primary_title(self, obj):
+        primary = next((complaint for complaint in (obj.cluster.complaints if obj.cluster else []) if complaint.is_cluster_primary), None)
+        return primary.title if primary else None
 
     def get_assigned_officer_id(self, obj):
         """

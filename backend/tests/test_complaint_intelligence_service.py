@@ -12,6 +12,7 @@ def complaint(title, description, latitude=9.9312, longitude=76.2673, category="
         longitude=longitude,
         ai_category=category,
         citizen_id=citizen_id,
+        semantic_embedding=None,
     )
 
 
@@ -31,8 +32,22 @@ def test_similar_reports_score_higher_than_distant_different_reports():
     similar = complaint("Dangerous pothole at bus stop", "Road pothole causing accidents", 9.9313, 76.2674)
     unrelated = complaint("Water pipe leak", "Water is leaking", 9.9500, 76.2900, "Water Supply")
 
-    assert ComplaintIntelligenceService.similarity(original, similar) >= 0.68
-    assert ComplaintIntelligenceService.similarity(original, unrelated) < 0.68
+    original.semantic_embedding = [1.0, 0.0, 0.0]
+    similar.semantic_embedding = [0.95, 0.05, 0.0]
+    unrelated.semantic_embedding = [0.0, 1.0, 0.0]
+
+    assert ComplaintIntelligenceService.similarity(original, similar) >= 0.84
+    assert ComplaintIntelligenceService.similarity(original, unrelated) == 0
+
+
+def test_distance_filter_uses_hard_configured_radius(monkeypatch):
+    original = complaint("Pothole", "Large pothole", 9.9312, 76.2673)
+    nearby = complaint("Pothole", "Large pothole", 9.9320, 76.2673)
+    far = complaint("Pothole", "Large pothole", 9.9340, 76.2673)
+    monkeypatch.setenv("DUPLICATE_MAX_DISTANCE_METERS", "100")
+
+    assert ComplaintIntelligenceService.passes_distance_filter(original, nearby)
+    assert not ComplaintIntelligenceService.passes_distance_filter(original, far)
 
 
 def test_cluster_priority_boost_counts_unique_reporters_only():
