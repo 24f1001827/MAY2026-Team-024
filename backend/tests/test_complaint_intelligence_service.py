@@ -27,6 +27,20 @@ def test_department_suggestion_is_non_binding_and_matches_keywords():
     assert suggestion["confidence"] > 0
 
 
+def test_department_suggestion_matches_descriptive_department_names():
+    departments = [
+        SimpleNamespace(id=1, name="City Roads Agency"),
+        SimpleNamespace(id=2, name="Municipal Water Board"),
+    ]
+
+    suggestion = ComplaintIntelligenceService.suggest_department(
+        "Large pothole", "A dangerous pothole has opened on the road.", departments
+    )
+
+    assert suggestion["department_id"] == 1
+    assert suggestion["department_name"] == "City Roads Agency"
+
+
 def test_similar_reports_score_higher_than_distant_different_reports():
     original = complaint("Pothole near bus stop", "Large pothole causing accidents")
     similar = complaint("Dangerous pothole at bus stop", "Road pothole causing accidents", 9.9313, 76.2674)
