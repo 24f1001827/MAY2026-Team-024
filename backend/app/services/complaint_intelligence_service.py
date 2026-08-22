@@ -40,6 +40,9 @@ class ComplaintIntelligenceService:
         if provider == "ollama":
             from langchain_ollama import ChatOllama
             return ChatOllama(model=model or "llama3.2", temperature=0.1)
+        if provider == "groq":
+            from langchain_groq import ChatGroq
+            return ChatGroq(model=model or "openai/gpt-oss-20b", api_key=os.getenv("GROQ_API_KEY"), temperature=0.1)
         raise ValueError(f"Unsupported LLM_PROVIDER: {provider}")
 
     @classmethod
