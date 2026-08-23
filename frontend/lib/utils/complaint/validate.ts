@@ -7,6 +7,8 @@
  * message, or null when the input is valid. Type-only imports → unit-testable.
  */
 
+import { distanceKm } from "@/lib/utils/geo"
+import type { AddressCentroid } from "@/lib/utils/complaint/location-data"
 import type {
   CreateComplaintRequest,
   UpdateComplaintRequest,
@@ -57,6 +59,48 @@ export function validateComplaintInput(
     return "Enter a valid 6-digit PIN code."
 
   return null
+}
+
+/**
+ * Slack allowed on top of an address's own spread, in km. A PIN represented by
+ * a single row in the postal dataset has a radius of 0, so without a floor any
+ * pin dropped a street away would read as a mismatch.
+ */
+const LOCATION_TOLERANCE_KM = 25
+
+/** How the map pin relates to the chosen address. */
+export interface LocationMatch {
+  distanceKm: number
+  toleranceKm: number
+  /** True when the pin sits further out than the address can account for. */
+  mismatch: boolean
+}
+
+/**
+ * Compare the dropped pin against the centroid of the selected address.
+ *
+ * The tolerance scales with how specific the address is — a whole state is
+ * allowed hundreds of km of slack, a single PIN only the floor above — so
+ * choosing just a state doesn't produce false alarms. Returns null when there
+ * isn't enough information to compare (no pin, or an address we can't place).
+ */
+export function checkLocationMatch(
+  coords: { lat: number | null; lng: number | null } | null,
+  centroid: AddressCentroid | null,
+): LocationMatch | null {
+  if (!centroid || !coords) return null
+  const { lat, lng } = coords
+  if (lat == null || lng == null) return null
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+
+  const distance = distanceKm({ lat, lng }, centroid)
+  const tolerance = centroid.radiusKm + LOCATION_TOLERANCE_KM
+
+  return {
+    distanceKm: distance,
+    toleranceKm: tolerance,
+    mismatch: distance > tolerance,
+  }
 }
 
 /**

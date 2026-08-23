@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/shadcn/card"
@@ -10,10 +10,16 @@ import { NativeSelect } from "@/components/shadcn/native-select"
 import { Label } from "@/components/shadcn/label"
 import { getApiErrorMessage } from "@/lib/api/error-message"
 import {
+  checkLocationMatch,
   IMAGE_RULES,
   validateComplaintImages,
   validateComplaintInput,
 } from "@/lib/utils/complaint/validate"
+import {
+  getCentroid,
+  resolveCoordinates,
+  type AddressCentroid,
+} from "@/lib/utils/complaint/location-data"
 import { toast } from "@/lib/styles/toast-styles"
 import { routes } from "@/nav"
 import { usePublicDepartments } from "@/hooks/department"
@@ -27,7 +33,11 @@ import type {
   UpdateComplaintRequest,
 } from "@/types/complaint"
 import { LocationPicker } from "./location-picker"
-import { IndiaIssueLocationForm } from "./india-issue-location-form"
+import {
+  COUNTRY,
+  IndiaIssueLocationForm,
+  type LocationValue,
+} from "./india-issue-location-form"
 import { complaintService, type DepartmentSuggestion } from "@/services/complaint-service"
 
 /** Shared `id` linking the header's submit button to this form. */
@@ -83,9 +93,93 @@ export function ComplaintForm({
     lat: complaint?.latitude ?? null,
     lng: complaint?.longitude ?? null,
   })
+  const [location, setLocation] = useState<LocationValue>({
+    country: COUNTRY,
+    state: complaint?.state ?? "",
+    district: complaint?.district ?? "",
+    city: complaint?.city ?? "",
+    pincode: complaint?.pincode ?? "",
+  })
+  // Where the chosen address sits on the map, and how far it spreads. Drives
+  // both the map's opening view and the pin/address consistency check.
+  const [centroid, setCentroid] = useState<AddressCentroid | null>(null)
   const [images, setImages] = useState<File[]>([])
   const [suggestion, setSuggestion] = useState<DepartmentSuggestion | null>(null)
   const [suggesting, setSuggesting] = useState(false)
+
+  // Address → map. Every address change re-resolves the centre point; only the
+  // async callback touches state, so nothing is set synchronously in the effect.
+  const { state, district, city, pincode } = location
+  useEffect(() => {
+    let active = true
+    getCentroid({ state, district, city, pincode })
+      .then((next) => active && setCentroid(next))
+      .catch(() => active && setCentroid(null))
+    return () => {
+      active = false
+    }
+  }, [state, district, city, pincode])
+
+  /**
+   * Map → address. Runs when the user *settles* on a position (drawer confirm,
+   * or leaving a coordinate field), not on every keystroke.
+   *
+   * An empty address is filled silently; a conflicting one is never overwritten
+   * behind the user's back — they get a warning with a one-tap way to accept
+   * the pin's address instead.
+   */
+  async function handleCoordsCommit(lat: number | null, lng: number | null) {
+    if (lat == null || lng == null) return
+
+    const resolved = await resolveCoordinates(lat, lng).catch(() => null)
+    if (!resolved) {
+      toast.warning("Couldn’t place that pin", {
+        description:
+          "No Indian address matches those coordinates. Check the pin, or fill the address in by hand.",
+      })
+      return
+    }
+
+    const next: LocationValue = {
+      country: COUNTRY,
+      state: resolved.state,
+      district: resolved.district,
+      city: resolved.city,
+      pincode: resolved.pincode,
+    }
+    const summary = `${resolved.city}, ${resolved.district}, ${resolved.state} — ${resolved.pincode}`
+
+    const alreadySet = Boolean(state || district || city || pincode)
+    const sameAddress =
+      state === next.state &&
+      district === next.district &&
+      city === next.city &&
+      pincode === next.pincode
+    if (sameAddress) return
+
+    if (!alreadySet) {
+      setLocation(next)
+      toast.info("Address filled from the map", { description: summary })
+      return
+    }
+
+    toast.warning("Pin doesn’t match the address", {
+      description: `The pin is in ${summary}. Your address says ${
+        [city, district, state].filter(Boolean).join(", ") || "something else"
+      }.`,
+      action: {
+        label: "Use pin’s address",
+        onClick: () => setLocation(next),
+      },
+    })
+  }
+
+  // How the pin compares to the chosen address — shown under the coordinates
+  // and re-checked on submit.
+  const locationMatch = useMemo(
+    () => checkLocationMatch(coords, centroid),
+    [coords, centroid],
+  )
 
   async function handleSuggestion() {
     const form = document.getElementById(COMPLAINT_FORM_ID) as HTMLFormElement | null
@@ -155,6 +249,17 @@ export function ComplaintForm({
     const fieldError = validateComplaintInput(base)
     if (fieldError) {
       toast.error("Check the form", { description: fieldError })
+      return
+    }
+
+    // The pin and the address are collected separately, so they can disagree —
+    // a complaint filed against the wrong district routes to the wrong office.
+    if (locationMatch?.mismatch) {
+      toast.error("Pin doesn’t match the address", {
+        description: `The pin is ${Math.round(locationMatch.distanceKm)} km from ${
+          base.pincode || base.city || base.state
+        }. Move the pin, or correct the address.`,
+      })
       return
     }
 
@@ -288,14 +393,7 @@ export function ComplaintForm({
 
           {/* Structured India address cascade → submits country, state, district,
               city and PIN as hidden inputs. */}
-          <IndiaIssueLocationForm
-            defaultValue={{
-              state: complaint?.state,
-              district: complaint?.district,
-              city: complaint?.city,
-              pincode: complaint?.pincode,
-            }}
-          />
+          <IndiaIssueLocationForm value={location} onChange={setLocation} />
 
           <Field
             label={isEdit ? "Photos (optional)" : "Photos"}
@@ -333,7 +431,24 @@ export function ComplaintForm({
           <LocationPicker
             lat={coords.lat}
             lng={coords.lng}
+            center={centroid}
             onChange={(lat, lng) => setCoords({ lat, lng })}
+            onCommit={handleCoordsCommit}
+            hint={
+              locationMatch && (
+                <p
+                  className={
+                    locationMatch.mismatch
+                      ? "text-xs font-medium text-destructive"
+                      : "text-xs text-muted-foreground"
+                  }
+                >
+                  {locationMatch.mismatch
+                    ? `This pin is ${Math.round(locationMatch.distanceKm)} km from the address above — check which one is wrong.`
+                    : `Pin matches the selected address (${locationMatch.distanceKm.toFixed(1)} km away).`}
+                </p>
+              )
+            }
           />
         </CardContent>
       </Card>

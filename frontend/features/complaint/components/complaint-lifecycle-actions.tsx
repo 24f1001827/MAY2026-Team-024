@@ -24,7 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/shadcn/dialog"
-import { Input } from "@/components/shadcn/input"
 import { NumericInput } from "@/components/shadcn/numeric-input"
 import { Label } from "@/components/shadcn/label"
 import { NativeSelect } from "@/components/shadcn/native-select"
