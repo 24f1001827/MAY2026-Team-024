@@ -36,6 +36,7 @@ import {
   DialogTitle,
 } from "@/components/shadcn/dialog"
 import { Label } from "@/components/shadcn/label"
+import { Spinner } from "@/components/shadcn/spinner"
 import { Textarea } from "@/components/shadcn/textarea"
 import { PageHeader } from "@/features/common/components/page-header"
 import { OfficerTenderSection } from "@/features/tender/components/officer-tender-section"
@@ -248,7 +249,14 @@ export function ComplaintDetail({
                   disabled={unlinkCluster.isPending}
                   onClick={handleUnlink}
                 >
-                  {unlinkCluster.isPending ? "Unlinking…" : "Unlink"}
+                  {unlinkCluster.isPending ? (
+                    <>
+                      <Spinner className="size-3.5" />
+                      Unlinking…
+                    </>
+                  ) : (
+                    "Unlink"
+                  )}
                 </Button>
               )}
             </span>
