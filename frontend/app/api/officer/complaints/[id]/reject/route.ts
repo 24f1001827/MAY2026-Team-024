@@ -7,16 +7,17 @@ import { backendFetch } from "@/lib/api/backend"
  *
  * The assigned officer rejects their pending assignment, proxied to Flask
  * `PATCH /officer/complaints/{id}/reject` with the caller's Bearer token.
- * No request body.
+ * Optional `{ reason }` body — the department head reads it before re-allotting.
  */
 export async function PATCH(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
+  const payload = await request.json().catch(() => ({}))
   const { status, body } = await backendFetch(
     `/officer/complaints/${id}/reject`,
-    { method: "PATCH" },
+    { method: "PATCH", json: payload ?? {} },
   )
   return NextResponse.json(body, { status })
 }

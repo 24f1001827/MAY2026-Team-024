@@ -19,6 +19,17 @@ export type ComplaintStatus =
 
 export type ComplaintPriority = "Low" | "Medium" | "High" | "Critical"
 
+/** How staff settled a citizen's dispute over an issue link. */
+export type DisputeOutcome = "Upheld" | "Rejected"
+
+/** An officer's hand-back of a complaint, shown to whoever re-allots it. */
+export interface AssignmentRejection {
+  officerId: string
+  officerName: string | null
+  reason: string | null
+  rejectedAt: string | null
+}
+
 export const COMPLAINT_STATUSES: readonly ComplaintStatus[] = [
   "Submitted",
   "Assigned",
@@ -72,6 +83,16 @@ export interface Complaint {
   clusterReportCount: number
   clusterPrimaryId: string | null
   clusterPrimaryTitle: string | null
+  /** Why the reporter contested the link; null unless a dispute was raised. */
+  disputeReason: string | null
+  disputeRaisedAt: string | null
+  /** How staff settled it; null while a dispute is open or was never raised. */
+  disputeOutcome: DisputeOutcome | null
+  disputeResolutionNote: string | null
+  disputeResolvedAt: string | null
+  disputeResolvedByName: string | null
+  /** Officers who already rejected this complaint, newest first. */
+  rejectionHistory: AssignmentRejection[]
   /** Budget committed to this complaint, set on allocation; null until then. */
   allocatedBudget: number | null
   /** Financial year the budget was drawn from (e.g. "2026-27"). */

@@ -52,12 +52,17 @@ export function useAcceptAssignment() {
   })
 }
 
-/** The assigned officer rejects their pending assignment. */
+/** The assigned officer hands their pending assignment back, with a reason. */
 export function useRejectAssignment() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (complaintId: string) =>
-      officerService.rejectAssignment(complaintId),
+    mutationFn: ({
+      complaintId,
+      reason,
+    }: {
+      complaintId: string
+      reason?: string
+    }) => officerService.rejectAssignment(complaintId, reason),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: officerKeys.departmentDashboard() }),
   })

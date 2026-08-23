@@ -6,4 +6,5 @@ export const complaintKeys = {
   mine: () => [...complaintKeys.all, "mine"] as const,
   adminList: () => [...complaintKeys.all, "admin"] as const,
   detail: (id: string) => [...complaintKeys.all, "detail", id] as const,
+  cluster: (id: string) => [...complaintKeys.all, "cluster", id] as const,
 }

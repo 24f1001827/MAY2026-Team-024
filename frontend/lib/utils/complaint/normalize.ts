@@ -8,6 +8,7 @@
  */
 
 import type {
+  DisputeOutcome,
   Complaint,
   ComplaintPriority,
   ComplaintRemark,
@@ -74,6 +75,18 @@ export interface RawComplaint {
   cluster_report_count?: number
   cluster_primary_id?: string | null
   cluster_primary_title?: string | null
+  dispute_reason?: string | null
+  dispute_raised_at?: string | null
+  dispute_outcome?: string | null
+  dispute_resolution_note?: string | null
+  dispute_resolved_at?: string | null
+  dispute_resolved_by_name?: string | null
+  rejection_history?: {
+    officer_id?: string
+    officer_name?: string | null
+    reason?: string | null
+    rejected_at?: string | null
+  }[]
   latitude?: number | string | null
   longitude?: number | string | null
   address: string
@@ -137,6 +150,18 @@ export function normalizeComplaint(raw: RawComplaint): Complaint {
     clusterReportCount: raw.cluster_report_count ?? 0,
     clusterPrimaryId: raw.cluster_primary_id ?? null,
     clusterPrimaryTitle: raw.cluster_primary_title ?? null,
+    disputeReason: raw.dispute_reason ?? null,
+    disputeRaisedAt: raw.dispute_raised_at ?? null,
+    disputeOutcome: (raw.dispute_outcome as DisputeOutcome | null) ?? null,
+    disputeResolutionNote: raw.dispute_resolution_note ?? null,
+    disputeResolvedAt: raw.dispute_resolved_at ?? null,
+    disputeResolvedByName: raw.dispute_resolved_by_name ?? null,
+    rejectionHistory: (raw.rejection_history ?? []).map((entry) => ({
+      officerId: entry.officer_id ?? "",
+      officerName: entry.officer_name ?? null,
+      reason: entry.reason ?? null,
+      rejectedAt: entry.rejected_at ?? null,
+    })),
     allocatedBudget: toNumberOrNull(raw.allocated_budget),
     budgetYear: raw.budget_year ?? null,
     createdAt: raw.created_at ?? "",

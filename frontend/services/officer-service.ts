@@ -119,9 +119,15 @@ export const officerService = {
     await api.patch(`/officer/complaints/${complaintId}/accept`, {})
   },
 
-  /** The assigned officer rejects their pending assignment. */
-  async rejectAssignment(complaintId: string): Promise<void> {
-    await api.patch(`/officer/complaints/${complaintId}/reject`, {})
+  /**
+   * The assigned officer hands their pending assignment back, optionally
+   * saying why. The complaint returns to the department queue (or is
+   * auto-offered onward), so a reason is what the head re-allots on.
+   */
+  async rejectAssignment(complaintId: string, reason?: string): Promise<void> {
+    await api.patch(`/officer/complaints/${complaintId}/reject`, {
+      reason: reason?.trim() ? reason.trim() : null,
+    })
   },
 
   /** The officer's own tenders (oversight list). */

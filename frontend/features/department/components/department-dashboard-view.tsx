@@ -80,9 +80,10 @@ export function DepartmentDashboardView({
   // Officers act on their own pending assignments from the My Queue tab.
   const isOfficer = currentRole === "Officer"
   const acting = accept.isPending || reject.isPending
+  // Reject now carries a payload rather than a bare id, so unwrap it.
   const actingId =
-    (accept.isPending && accept.variables) ||
-    (reject.isPending && reject.variables) ||
+    (accept.isPending ? accept.variables : null) ??
+    (reject.isPending ? reject.variables?.complaintId : null) ??
     null
 
   function handleAccept(complaintId: string) {
@@ -99,18 +100,22 @@ export function DepartmentDashboardView({
     })
   }
 
-  function handleReject(complaintId: string) {
+  function handleReject(complaintId: string, reason?: string) {
     if (acting) return
-    reject.mutate(complaintId, {
+    reject.mutate(
+      { complaintId, reason },
+      {
       onSuccess: () =>
         toast.success("Assignment rejected", {
-          description: "The complaint has been returned for re-allotment.",
+          description:
+            "The complaint went back to the department for re-allotment.",
         }),
       onError: (err) =>
         toast.error("Couldn’t reject", {
           description: getApiErrorMessage(err, "Please try again."),
         }),
-    })
+      },
+    )
   }
 
   return (

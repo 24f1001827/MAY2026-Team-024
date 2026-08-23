@@ -35,6 +35,7 @@ import {
 import { Input } from "@/components/shadcn/input"
 import { Label } from "@/components/shadcn/label"
 import { NativeSelect } from "@/components/shadcn/native-select"
+import { Textarea } from "@/components/shadcn/textarea"
 import {
   Select,
   SelectContent,
@@ -230,6 +231,19 @@ function ComplaintItem({
           </span>
           {` · ${complaint.locality}, ${complaint.city}`}
         </p>
+        {/* A complaint back in the queue after a hand-back: say who refused it
+            and why, so the head doesn't route it the same way twice. */}
+        {complaint.rejectionHistory.length > 0 && (
+          <p className="mt-0.5 line-clamp-1 text-xs text-destructive">
+            Returned by{" "}
+            {complaint.rejectionHistory
+              .map((entry) => entry.officerName ?? "an officer")
+              .join(", ")}
+            {complaint.rejectionHistory[0]?.reason
+              ? ` — ${complaint.rejectionHistory[0].reason}`
+              : ""}
+          </p>
+        )}
       </div>
       {action ?? (
         <Link
@@ -409,14 +423,18 @@ function MyComplaintsTab({
   complaints: Complaint[]
   /** Accept the pending assignment for a complaint (officer's own queue). */
   onAccept?: (complaintId: string) => void
-  /** Reject the pending assignment for a complaint. */
-  onReject?: (complaintId: string) => void
+  /** Hand the pending assignment back, optionally saying why. */
+  onReject?: (complaintId: string, reason?: string) => void
   /** Complaint id with an accept/reject request in flight (disables its row). */
   actingId?: string | null
 }) {
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState("all")
   const [page, setPage] = useState(1)
+  // The complaint being handed back, and the reason typed for it. Rejecting
+  // asks for a reason because the department head re-allots on it.
+  const [rejecting, setRejecting] = useState<Complaint | null>(null)
+  const [rejectReason, setRejectReason] = useState("")
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -495,7 +513,7 @@ function MyComplaintsTab({
                             variant="outline"
                             className="text-destructive hover:text-destructive"
                             disabled={busy}
-                            onClick={() => onReject?.(complaint.id)}
+                            onClick={() => setRejecting(complaint)}
                           >
                             Reject
                           </Button>
@@ -518,6 +536,61 @@ function MyComplaintsTab({
           </>
         )}
       </CardContent>
+
+      {/* Reject = hand back. The reason travels to the department head, who
+          decides where the complaint goes next. */}
+      <Dialog
+        open={rejecting !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRejecting(null)
+            setRejectReason("")
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject this assignment</DialogTitle>
+            <DialogDescription>
+              “{rejecting?.title}” goes back to the department for
+              re-allotment. Tell the head why so they can route it correctly.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="rejectReason">Reason (optional)</Label>
+            <Textarea
+              id="rejectReason"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={3}
+              placeholder="e.g. Outside my ward — belongs to zone 4."
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRejecting(null)}
+              disabled={actingId === rejecting?.id}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="brand"
+              disabled={actingId === rejecting?.id}
+              onClick={() => {
+                if (!rejecting) return
+                onReject?.(rejecting.id, rejectReason.trim() || undefined)
+                setRejecting(null)
+                setRejectReason("")
+              }}
+            >
+              Reject assignment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }

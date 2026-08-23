@@ -8,6 +8,7 @@ import {
   Analytics01Icon,
   Building03Icon,
   ClipboardIcon,
+  Link01Icon,
   Clock01Icon,
   FlagIcon,
   Location01Icon,
@@ -39,7 +40,8 @@ import { Textarea } from "@/components/shadcn/textarea"
 import { PageHeader } from "@/features/common/components/page-header"
 import { OfficerTenderSection } from "@/features/tender/components/officer-tender-section"
 import { ComplaintLifecycleActions } from "@/features/complaint/components/complaint-lifecycle-actions"
-import { useAddRemark, useDisputeCluster, useLinkCluster, useUnlinkCluster } from "@/hooks/complaint"
+import { IssueDrawer } from "@/features/complaint/components/issue-drawer"
+import { useAddRemark } from "@/hooks/complaint"
 import { ApiError } from "@/lib/api/api-client"
 import { cn } from "@/lib/utils"
 import { routes } from "@/nav"
@@ -111,26 +113,9 @@ export function ComplaintDetail({
   const status = complaint.status
 
   const [remarkOpen, setRemarkOpen] = useState(false)
+  const [issueOpen, setIssueOpen] = useState(false)
   const [remarkMessage, setRemarkMessage] = useState("")
   const addRemark = useAddRemark()
-  const disputeCluster = useDisputeCluster()
-  const linkCluster = useLinkCluster()
-  const unlinkCluster = useUnlinkCluster()
-
-  async function handleClusterAction(action: "dispute" | "unlink" | "link") {
-    try {
-      if (action === "dispute") await disputeCluster.mutateAsync(complaint.id)
-      if (action === "unlink") await unlinkCluster.mutateAsync(complaint.id)
-      if (action === "link") {
-        const targetComplaintId = window.prompt("Enter the primary complaint ID to link this report to:")
-        if (!targetComplaintId) return
-        await linkCluster.mutateAsync({ id: complaint.id, targetComplaintId })
-      }
-      toast.success(action === "dispute" ? "Grouping dispute submitted." : "Complaint grouping updated.")
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Couldn’t update complaint grouping.")
-    }
-  }
 
   // Newest first, regardless of the source ordering.
   const activity = [...initialRemarks].sort((a, b) =>
@@ -234,13 +219,19 @@ export function ComplaintDetail({
                     <span className="text-muted-foreground">Not scored</span>
                   )}
                 </DetailRow>
-                <DetailRow icon={ClipboardIcon} label="Related reports">
-                  {complaint.clusterReportCount} report{complaint.clusterReportCount === 1 ? "" : "s"}
-                  {complaint.isClusterPrimary && " · primary report"}
-                  {complaint.clusterDisputed && " · grouping disputed"}
+                <DetailRow icon={Link01Icon} label="Issue">
+                  {complaint.clusterReportCount} Linked Complaint
+                  {complaint.clusterReportCount === 1 ? "" : "s"}
+                  {complaint.isClusterPrimary && " · Primary"}
+                  {complaint.clusterDisputed && (
+                    <span className="font-medium text-destructive">
+                      {" "}
+                      · Disputed
+                    </span>
+                  )}
                 </DetailRow>
                 {!complaint.isClusterPrimary && complaint.clusterPrimaryId && complaint.clusterPrimaryTitle && (
-                  <DetailRow icon={ClipboardIcon} label="Linked report">
+                  <DetailRow icon={Link01Icon} label="Primary Complaint">
                     <Link
                       className="text-primary underline-offset-4 hover:underline"
                       href={routes.complaints.detail(complaint.clusterPrimaryId).href}
@@ -250,7 +241,7 @@ export function ComplaintDetail({
                   </DetailRow>
                 )}
                 {complaint.allocatedBudget != null && (
-                  <DetailRow icon={Wallet01Icon} label="Allocated budget">
+                  <DetailRow icon={Wallet01Icon} label="Allocated Budget">
                     {formatCurrency(complaint.allocatedBudget)}
                     {complaint.budgetYear && (
                       <span className="text-muted-foreground">
@@ -261,17 +252,21 @@ export function ComplaintDetail({
                   </DetailRow>
                 )}
               </dl>
+              {/* Everything about the issue — the linked complaints, staff
+                  link/unlink, and the whole dispute exchange — lives in one
+                  drawer rather than scattered buttons under the details. */}
               {!readOnly && (
                 <div className="flex flex-wrap gap-2 border-t pt-4">
-                  {currentRole === "Citizen" && complaint.clusterReportCount > 1 && !complaint.clusterDisputed && (
-                    <Button size="sm" variant="outline" onClick={() => handleClusterAction("dispute")}>Dispute grouping</Button>
-                  )}
-                  {(currentRole === "Admin" || currentRole === "Officer") && (
-                    <>
-                      <Button size="sm" variant="outline" onClick={() => handleClusterAction("link")}>Link to similar complaint</Button>
-                      {!complaint.isClusterPrimary && <Button size="sm" variant="outline" onClick={() => handleClusterAction("unlink")}>Unlink report</Button>}
-                    </>
-                  )}
+                  <Button
+                    size="sm"
+                    variant={complaint.clusterDisputed ? "brand" : "outline"}
+                    onClick={() => setIssueOpen(true)}
+                  >
+                    <HugeiconsIcon icon={Link01Icon} />
+                    {complaint.clusterDisputed
+                      ? "Review Dispute"
+                      : "Manage Linked Complaints"}
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -282,7 +277,7 @@ export function ComplaintDetail({
             <Card className="[--card-spacing:--spacing(6)]">
               <CardHeader>
                 <CardTitle className="text-sm font-semibold">
-                  Review report
+                  Review Report
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -360,7 +355,7 @@ export function ComplaintDetail({
                     onClick={() => setRemarkOpen(true)}
                   >
                     <HugeiconsIcon icon={PlusSignIcon} />
-                    Add activity
+                    Add Activity
                   </Button>
                 </CardAction>
               )}
@@ -369,7 +364,7 @@ export function ComplaintDetail({
               <ol className="space-y-5">
                 {activity.length === 0 ? (
                   <li className="text-sm text-muted-foreground">
-                    No activity yet.
+                    No Activity Yet.
                   </li>
                 ) : (
                   activity.map((remark) => (
@@ -473,6 +468,16 @@ export function ComplaintDetail({
           )}
         </div>
       </div>
+
+      {/* Issue drawer — linked complaints + the dispute exchange. */}
+      {!readOnly && (
+        <IssueDrawer
+          complaint={complaint}
+          currentRole={currentRole}
+          open={issueOpen}
+          onOpenChange={setIssueOpen}
+        />
+      )}
 
       {/* Add-activity (remark) dialog — officers and admins. */}
       <Dialog
