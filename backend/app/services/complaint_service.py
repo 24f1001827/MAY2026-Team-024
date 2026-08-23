@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 
 from app.repositories import (
     UserRepository,
@@ -21,6 +22,7 @@ from app.models import (
     AvailabilityStatus,
     AssignmentStatus,
     AssignedBy,
+    DisputeOutcome,
 )
 from app.extensions import db
 from marshmallow import ValidationError
@@ -39,24 +41,31 @@ class ComplaintService:
     """
 
     @staticmethod
-    def _auto_assign(complaint):
+    def _auto_assign(complaint, exclude_officer_ids=None):
         """
-        Auto-assign a freshly created complaint to the least-loaded available
-        officer in its department (availability = Available, below capacity).
-        Sets the assignment PENDING, bumps the officer's workload, and marks the
+        Auto-assign a complaint to the least-loaded available officer in its
+        department (availability = Available, below capacity). Sets the
+        assignment PENDING, bumps the officer's workload, and marks the
         complaint ASSIGNED. If no officer is eligible, the complaint stays in the
         queue (SUBMITTED) for manual allotment. Returns the officer or None.
+
+        `exclude_officer_ids` skips officers who shouldn't get it — on
+        re-allotment after a rejection, that's whoever already turned it down,
+        so the case can't bounce straight back to them.
         """
 
         officers = OfficerRepository.get_by_department_id(
             complaint.department_id
         )
 
+        excluded = exclude_officer_ids or set()
+
         eligible = [
             o
             for o in officers
             if o.availability_status == AvailabilityStatus.AVAILABLE
             and o.current_workload < o.max_workload
+            and o.user_id not in excluded
         ]
 
         if not eligible:
@@ -145,8 +154,8 @@ class ComplaintService:
             NotificationService.create_notification({
                 "user_id": citizen_id,
                 "type": NotificationType.STATUS_CHANGE,
-                "title": "Related complaint updated",
-                "message": f"The reported issue related to '{complaint.title}' is now {status.value}.",
+                "title": "Linked complaint updated",
+                "message": f"The issue behind your complaint '{complaint.title}' is now {status.value}.",
             })
 
     @staticmethod
@@ -170,8 +179,8 @@ class ComplaintService:
             NotificationService.create_notification({
                 "user_id": complaint.citizen_id,
                 "type": NotificationType.STATUS_CHANGE,
-                "title": "Report linked to an existing issue",
-                "message": f"Your report was grouped with the primary report '{best.title}'. You can view it or dispute the grouping.",
+                "title": "Complaint linked to an existing issue",
+                "message": f"Your complaint was linked to the primary complaint '{best.title}' for the same issue. You can view it or dispute the link.",
             })
         else:
             cluster = ComplaintClusterRepository.create({
@@ -322,16 +331,129 @@ class ComplaintService:
         return complaints
 
     @staticmethod
-    def dispute_cluster(complaint_id):
-        user_id = get_jwt_identity()
+    def dispute_cluster(complaint_id, reason):
+        """
+        The reporting citizen contests their complaint being linked to an
+        issue, giving a reason staff can act on.
+        """
+        # Compare against the loaded user's id, not the raw JWT identity: the
+        # column is a UUID and the token carries a string, so a direct `!=`
+        # is always true and would reject every owner.
+        user = UserRepository.get_by_id(get_jwt_identity())
         complaint = ComplaintRepository.get_by_id(complaint_id)
         if not complaint:
             raise ValueError("Complaint not found.")
-        if complaint.citizen_id != user_id:
+        if not user or complaint.citizen_id != user.id:
             raise PermissionError("You are not authorized to dispute this grouping.")
+        if complaint.cluster_disputed:
+            raise ValueError("This grouping is already disputed.")
+
+        members = (
+            ComplaintRepository.get_cluster_members(complaint.cluster_id)
+            if complaint.cluster_id
+            else []
+        )
+        if len(members) < 2:
+            raise ValueError(
+                "This complaint isn't linked to any other complaint, so there is "
+                "nothing to dispute."
+            )
+
         complaint.cluster_disputed = True
+        complaint.dispute_reason = reason
+        complaint.dispute_raised_at = datetime.now(timezone.utc)
+        # A re-raised dispute starts clean — the previous outcome no longer
+        # describes the open one.
+        complaint.dispute_outcome = None
+        complaint.dispute_resolution_note = None
+        complaint.dispute_resolved_at = None
+        complaint.dispute_resolved_by = None
+
+        # Tell whoever is handling the complaint that its reporter has objected.
+        assignment = ComplaintAssignmentRepository.get_by_complaint_id(complaint.id)
+        if assignment:
+            NotificationService.create_notification({
+                "user_id": assignment.officer_id,
+                "type": NotificationType.STATUS_CHANGE,
+                "title": "Complaint link disputed",
+                "message": (
+                    f"The reporter of '{complaint.title}' disputes it being linked "
+                    f"to this issue. Reason: {reason}"
+                ),
+            })
+
         db.session.commit()
         return complaint
+
+    @staticmethod
+    def resolve_dispute(complaint_id, outcome, note=None):
+        """
+        Staff settle an open dispute.
+
+        `UPHELD` agrees with the citizen and splits the complaint back out into
+        its own issue (reusing `unlink_complaint`'s re-clustering); `REJECTED`
+        keeps it linked. Either way the trail — who, when, why — is recorded on
+        the complaint, and the reporter is told the result.
+        """
+        actor = UserRepository.get_by_id(get_jwt_identity())
+        complaint = ComplaintRepository.get_by_id(complaint_id)
+        if not complaint:
+            raise ValueError("Complaint not found.")
+        if not complaint.cluster_disputed:
+            raise ValueError("This complaint has no open dispute.")
+
+        if actor.role == UserRole.OFFICER:
+            officer = OfficerRepository.get_by_user_id(actor.id)
+            if not officer or complaint.department_id != officer.department_id:
+                raise PermissionError(
+                    "Officers can resolve disputes only within their department."
+                )
+
+        if outcome == DisputeOutcome.UPHELD:
+            # Splitting the complaint out is exactly what unlink already does,
+            # including re-clustering and repairing the old issue's primary.
+            ComplaintService.unlink_complaint(complaint_id)
+
+        complaint.cluster_disputed = False
+        complaint.dispute_outcome = outcome
+        complaint.dispute_resolution_note = note
+        complaint.dispute_resolved_at = datetime.now(timezone.utc)
+        complaint.dispute_resolved_by = actor.id
+
+        if complaint.citizen_id:
+            NotificationService.create_notification({
+                "user_id": complaint.citizen_id,
+                "type": NotificationType.STATUS_CHANGE,
+                "title": "Grouping dispute resolved",
+                "message": (
+                    f"Your dispute about '{complaint.title}' was "
+                    f"{outcome.value.lower()}."
+                    + (f" {note}" if note else "")
+                ),
+            })
+
+        db.session.commit()
+        return complaint
+
+    @staticmethod
+    def get_cluster_members(complaint_id):
+        """
+        Every complaint linked to the same real-world issue as this one,
+        primary first then newest, so the UI can list the whole group.
+
+        A complaint that was never clustered returns just itself.
+        """
+        complaint = ComplaintRepository.get_by_id(complaint_id)
+        if not complaint:
+            raise ValueError("Complaint not found.")
+        if not complaint.cluster_id:
+            return [complaint]
+
+        members = ComplaintRepository.get_cluster_members(complaint.cluster_id)
+        return sorted(
+            members,
+            key=lambda item: (not item.is_cluster_primary, -item.created_at.timestamp()),
+        )
 
     @staticmethod
     def link_complaint(complaint_id, target_complaint_id):

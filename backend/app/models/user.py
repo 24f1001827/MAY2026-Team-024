@@ -76,9 +76,12 @@ class User(BaseModel):
         cascade="all, delete-orphan",
     )
 
+    # `complaints` means "complaints this user filed". Complaint also points at
+    # users via `dispute_resolved_by`, so the join column has to be explicit.
     complaints = db.relationship(
         "Complaint",
         back_populates="citizen",
+        foreign_keys="Complaint.citizen_id",
         lazy=True,
     )
 

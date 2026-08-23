@@ -2,7 +2,7 @@ import uuid
 
 from app.extensions import db
 from app.models.base_model import BaseModel
-from app.models.enums import ComplaintPriority, ComplaintStatus
+from app.models.enums import ComplaintPriority, ComplaintStatus, DisputeOutcome
 
 
 class Complaint(BaseModel):
@@ -117,6 +117,27 @@ class Complaint(BaseModel):
 
     cluster_disputed = db.Column(db.Boolean, default=False, nullable=False)
 
+    # Dispute trail. A citizen who thinks their complaint was grouped with the
+    # wrong issue raises one with a reason; staff then uphold it (the complaint
+    # is split back out) or reject it (it stays linked). Everything below is
+    # null until a dispute is raised, and the resolution columns stay null
+    # until it is settled.
+    dispute_reason = db.Column(db.Text, nullable=True)
+
+    dispute_raised_at = db.Column(db.DateTime, nullable=True)
+
+    dispute_outcome = db.Column(db.Enum(DisputeOutcome), nullable=True)
+
+    dispute_resolution_note = db.Column(db.Text, nullable=True)
+
+    dispute_resolved_at = db.Column(db.DateTime, nullable=True)
+
+    dispute_resolved_by = db.Column(
+        db.UUID(as_uuid=True),
+        db.ForeignKey("users.id"),
+        nullable=True,
+    )
+
     # Budget committed to this complaint (set on allocation), and the financial
     # year it was drawn from. Null until an admin allocates budget.
     allocated_budget = db.Column(
@@ -136,6 +157,13 @@ class Complaint(BaseModel):
     citizen = db.relationship(
         "User",
         back_populates="complaints",
+        foreign_keys=[citizen_id],
+    )
+
+    # The staff member who settled the grouping dispute, if one was raised.
+    dispute_resolver = db.relationship(
+        "User",
+        foreign_keys=[dispute_resolved_by],
     )
 
     department = db.relationship(

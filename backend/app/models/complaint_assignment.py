@@ -47,6 +47,18 @@ class ComplaintAssignment(BaseModel):
         nullable=True,
     )
 
+    # Why the officer sent the case back, and when. Null unless this assignment
+    # was rejected — the department head reads this before re-allotting.
+    rejection_reason = db.Column(
+        db.Text,
+        nullable=True,
+    )
+
+    rejected_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True,
+    )
+
     # -------------------------
     # Relationships
     # -------------------------

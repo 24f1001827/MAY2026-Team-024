@@ -39,6 +39,26 @@ class OfficerRepository:
         )
 
     @staticmethod
+    def get_department_head(department_id):
+        """
+        The active officer who heads a department, or None when it has no head.
+
+        Allotment decisions belong to the head, so hand-backs are addressed
+        here rather than to an arbitrary admin.
+        """
+
+        return (
+            Officer.query.join(User)
+            .filter(
+                Officer.department_id == department_id,
+                Officer.is_department_head.is_(True),
+                Officer.deleted_at.is_(None),
+                User.status == UserStatus.ACTIVE,
+            )
+            .first()
+        )
+
+    @staticmethod
     def get_all():
         """
         Retrieve all active officers (any department), ordered by name — for the

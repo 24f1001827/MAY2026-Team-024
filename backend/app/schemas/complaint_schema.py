@@ -10,6 +10,8 @@ from marshmallow import (
 )
 from marshmallow_enum import EnumField
 
+from app.models.enums import DisputeOutcome
+
 from app.models.enums import (
     AssignmentStatus,
     TenderStatus,
@@ -248,6 +250,23 @@ class ComplaintResponseSchema(Schema):
 
     cluster_primary_title = fields.Method("get_cluster_primary_title")
 
+    # Dispute trail — all null until the reporter contests the link.
+    dispute_reason = fields.String(allow_none=True)
+
+    dispute_raised_at = fields.DateTime(allow_none=True)
+
+    dispute_outcome = fields.Method("get_dispute_outcome")
+
+    dispute_resolution_note = fields.String(allow_none=True)
+
+    dispute_resolved_at = fields.DateTime(allow_none=True)
+
+    dispute_resolved_by_name = fields.Method("get_dispute_resolved_by_name")
+
+    # Officers who handed this complaint back, so the head re-allotting it can
+    # see who already refused and why. Empty for the common case.
+    rejection_history = fields.Method("get_rejection_history")
+
     allocated_budget = fields.Decimal(as_string=True, allow_none=True)
 
     budget_year = fields.String(allow_none=True)
@@ -298,6 +317,31 @@ class ComplaintResponseSchema(Schema):
     def get_cluster_primary_title(self, obj):
         primary = next((complaint for complaint in (obj.cluster.complaints if obj.cluster else []) if complaint.is_cluster_primary), None)
         return primary.title if primary else None
+
+    def get_dispute_outcome(self, obj):
+        return obj.dispute_outcome.value if obj.dispute_outcome else None
+
+    def get_dispute_resolved_by_name(self, obj):
+        return obj.dispute_resolver.name if obj.dispute_resolver else None
+
+    def get_rejection_history(self, obj):
+        rejected = [
+            a for a in obj.assignments if a.status == AssignmentStatus.REJECTED
+        ]
+        rejected.sort(key=lambda a: a.created_at, reverse=True)
+        return [
+            {
+                "officer_id": str(a.officer_id),
+                "officer_name": (
+                    a.officer.user.name if a.officer and a.officer.user else None
+                ),
+                "reason": a.rejection_reason,
+                "rejected_at": (
+                    a.rejected_at.isoformat() if a.rejected_at else None
+                ),
+            }
+            for a in rejected
+        ]
 
     def get_assigned_officer_id(self, obj):
         """
@@ -566,3 +610,35 @@ class DepartmentSuggestionSchema(Schema):
 
 class LinkComplaintSchema(Schema):
     target_complaint_id = fields.UUID(required=True)
+
+
+class DisputeClusterSchema(Schema):
+    """The reporter's objection to their complaint being linked to an issue."""
+
+    reason = fields.String(required=True)
+
+    @validates("reason")
+    def validate_reason(self, value, **kwargs):
+        if len(value.strip()) < 10:
+            raise ValidationError(
+                "Tell us why in at least 10 characters, so staff can act on it."
+            )
+
+        if len(value) > 1000:
+            raise ValidationError("Reason cannot exceed 1000 characters.")
+
+
+class ResolveDisputeSchema(Schema):
+    """How staff settled a dispute — see `DisputeOutcome`."""
+
+    outcome = fields.String(
+        required=True,
+        validate=validate.OneOf([item.value for item in DisputeOutcome]),
+    )
+
+    note = fields.String(required=False, allow_none=True, load_default=None)
+
+    @validates("note")
+    def validate_note(self, value, **kwargs):
+        if value is not None and len(value) > 1000:
+            raise ValidationError("Note cannot exceed 1000 characters.")

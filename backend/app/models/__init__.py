@@ -12,6 +12,7 @@ from .enums import (
     ProposalStatus,
     WorkOrderStatus,
     ReviewDecision,
+    DisputeOutcome,
     NotificationType,
     AssignedBy
 )
