@@ -150,8 +150,17 @@ export const complaintService = {
     await api.post(`/complaints/${id}/cluster/link`, { target_complaint_id: targetComplaintId })
   },
 
-  async unlinkCluster(id: string): Promise<void> {
-    await api.post(`/complaints/${id}/cluster/unlink`, {})
+  /**
+   * Detach a complaint from its issue. Returns the updated complaint, because
+   * unlinking doesn't always leave it standalone — the detector may attach it
+   * to a different nearby issue, and the caller should say which happened.
+   */
+  async unlinkCluster(id: string): Promise<Complaint> {
+    const res = await api.post<Envelope<RawComplaint>>(
+      `/complaints/${id}/cluster/unlink`,
+      {},
+    )
+    return normalizeComplaint(res.data)
   },
 
   /** Citizen: update an existing complaint (optionally replacing images). */
