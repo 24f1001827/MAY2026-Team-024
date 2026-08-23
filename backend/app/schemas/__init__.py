@@ -15,6 +15,8 @@ from .complaint_schema import (
     ReopenComplaintSchema,
     DepartmentSuggestionSchema,
     LinkComplaintSchema,
+    DisputeClusterSchema,
+    ResolveDisputeSchema,
 )
 
 from .admin_user_schema import (
@@ -25,6 +27,7 @@ from .admin_user_schema import (
 from .officer_schema import (
     OfficerComplaintResponseSchema,
     ComplaintAssignmentResponseSchema,
+    RejectAssignmentSchema,
     CreateReviewReportSchema,
     ReviewReportResponseSchema,
     OfficerComplaintDetailSchema,

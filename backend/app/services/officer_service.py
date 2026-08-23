@@ -139,12 +139,23 @@ class OfficerService:
                 "Officer does not belong to the complaint department."
             )
 
-        existing = ComplaintAssignmentRepository.get_by_complaint_id(
+        # Only a *live* assignment blocks allotment. A rejected one means the
+        # complaint was handed back and is waiting for exactly this.
+        existing = ComplaintAssignmentRepository.get_active_by_complaint_id(
             complaint_id
         )
 
         if existing:
             raise ValueError("Complaint has already been assigned.")
+
+        # Re-allotting to whoever just rejected it would only bounce again.
+        if officer.user_id in ComplaintAssignmentRepository.get_rejected_officer_ids(
+            complaint.id
+        ):
+            raise ValueError(
+                f"{officer.user.name} already rejected this complaint. "
+                "Allot it to a different officer."
+            )
 
         assignment = ComplaintAssignmentRepository.create(
             {
@@ -266,9 +277,15 @@ class OfficerService:
         return assignment
 
     @staticmethod
-    def reject_assignment(user_id, complaint_id):
+    def reject_assignment(user_id, complaint_id, reason=None):
         """
-        Reject a complaint assignment.
+        Reject a complaint assignment and put the complaint back into play.
+
+        Rejecting is a hand-back, not a dead end: the complaint returns to
+        SUBMITTED so its status stops claiming someone owns it, and it becomes
+        allottable again. Under automatic allotment it is immediately offered to
+        the next-best officer — never one who already rejected it — and if
+        nobody is eligible it waits in the department's manual queue.
         """
 
         officer = OfficerRepository.get_by_user_id(user_id)
@@ -287,34 +304,97 @@ class OfficerService:
         if assignment.status != AssignmentStatus.PENDING:
             raise ValueError("Only pending assignments can be rejected.")
 
+        complaint = assignment.complaint
+
         assignment.status = AssignmentStatus.REJECTED
+        assignment.rejection_reason = reason
+        assignment.rejected_at = datetime.now(IST)
         # Rejecting releases the case, so it leaves the officer's workload
         # (which was counted at allotment).
         officer.current_workload = max(0, officer.current_workload - 1)
 
+        # The complaint is nobody's until it is allotted again.
+        previous_status = complaint.status
+        complaint.status = ComplaintStatus.SUBMITTED
+
         ActivityService.record(
-            assignment.complaint.id,
-            f"{officer.user.name} rejected the assignment.",
+            complaint.id,
+            f"{officer.user.name} rejected the assignment."
+            + (f" Reason: {reason}" if reason else ""),
             user_id=officer.user_id,
+            status_from=previous_status,
+            status_to=ComplaintStatus.SUBMITTED,
         )
+
+        # Offer it onward straight away when the org runs on auto-allotment;
+        # otherwise it surfaces in the head's queue for a manual decision.
+        reassigned_to = None
+        if not SettingsService.is_manual_allotment():
+            reassigned_to = ComplaintService._auto_assign(
+                complaint,
+                exclude_officer_ids=(
+                    ComplaintAssignmentRepository.get_rejected_officer_ids(
+                        complaint.id
+                    )
+                    | {officer.user_id}
+                ),
+            )
 
         ComplaintAssignmentRepository.update()
 
-        admin=User.query.filter_by(role=UserRole.ADMIN).first()
-
-        NotificationService.create_notification(
-            {
-                "user_id": admin.id,
-                "type": NotificationType.ASSIGNMENT_REJECTED,
-                "title": "Assignment Rejected",
-                "message": (
-                    f"The assigned officer rejected complaint "
-                    f"'complaint ID: {assignment.complaint.id}, Complaint title: {assignment.complaint.title}'."
-                ),
-            }
+        OfficerService._notify_rejection(
+            complaint, officer, reason, reassigned_to
         )
 
         return assignment
+
+    @staticmethod
+    def _notify_rejection(complaint, officer, reason, reassigned_to):
+        """
+        Tell the people who need to act on a hand-back: the department head who
+        allots (falling back to an admin when the department has no head), and
+        the officer it was just passed to, if any.
+        """
+
+        detail = f" Reason: {reason}" if reason else ""
+
+        head = OfficerRepository.get_department_head(complaint.department_id)
+        recipient_id = head.user_id if head else None
+
+        if recipient_id is None:
+            admin = User.query.filter_by(role=UserRole.ADMIN).first()
+            recipient_id = admin.id if admin else None
+
+        if recipient_id and recipient_id != officer.user_id:
+            NotificationService.create_notification(
+                {
+                    "user_id": recipient_id,
+                    "type": NotificationType.ASSIGNMENT_REJECTED,
+                    "title": "Assignment rejected",
+                    "message": (
+                        f"{officer.user.name} rejected '{complaint.title}'."
+                        + detail
+                        + (
+                            f" It was reassigned to {reassigned_to.user.name}."
+                            if reassigned_to
+                            else " It is back in the department queue."
+                        )
+                    ),
+                }
+            )
+
+        if reassigned_to:
+            NotificationService.create_notification(
+                {
+                    "user_id": reassigned_to.user_id,
+                    "type": NotificationType.COMPLAINT_ASSIGNED,
+                    "title": "Complaint assigned to you",
+                    "message": (
+                        f"'{complaint.title}' was reassigned to you after "
+                        f"another officer rejected it." + detail
+                    ),
+                }
+            )
 
     @staticmethod
     def submit_review_report(user_id, complaint_id, data):

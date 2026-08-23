@@ -10,6 +10,7 @@ from app.models.enums import UserRole
 from app.schemas import (
     OfficerComplaintResponseSchema,
     ComplaintAssignmentResponseSchema,
+    RejectAssignmentSchema,
     CreateReviewReportSchema,
     ReviewReportResponseSchema,
     OfficerComplaintDetailSchema,
@@ -264,9 +265,12 @@ def reject_assignment(complaint_id):
     try:
         user_id = get_jwt_identity()
 
+        data = RejectAssignmentSchema().load(request.get_json(silent=True) or {})
+
         assignment = OfficerService.reject_assignment(
             user_id,
             complaint_id,
+            data.get("reason"),
         )
 
         return (
@@ -279,6 +283,9 @@ def reject_assignment(complaint_id):
             ),
             200,
         )
+
+    except ValidationError as err:
+        return jsonify({"success": False, "errors": err.messages}), 422
 
     except ValueError as e:
         return (

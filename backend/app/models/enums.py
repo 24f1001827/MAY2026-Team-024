@@ -90,6 +90,13 @@ class ReviewDecision(Enum):
     CLOSED = "Closed"
 
 
+class DisputeOutcome(Enum):
+    """How staff settled a citizen's dispute over a complaint's issue grouping."""
+
+    UPHELD = "Upheld"
+    REJECTED = "Rejected"
+
+
 class NotificationType(Enum):
     COMPLAINT_CREATED="ComplaintCreated"
     COMPLAINT_ASSIGNED="ComplaintAssigned"

@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields
+from marshmallow import Schema, ValidationError, fields, validates
 from marshmallow_enum import EnumField
 
 from app.models import (
@@ -73,6 +73,39 @@ class ComplaintAssignmentResponseSchema(Schema):
     accepted_at = fields.DateTime(
         allow_none=True,
     )
+
+    officer_id = fields.UUID()
+
+    officer_name = fields.Method("get_officer_name")
+
+    rejection_reason = fields.String(allow_none=True)
+
+    rejected_at = fields.DateTime(allow_none=True)
+
+    def get_officer_name(self, obj):
+        return obj.officer.user.name if obj.officer and obj.officer.user else None
+
+
+class RejectAssignmentSchema(Schema):
+    """
+    The officer's reason for handing a complaint back. Optional, but the
+    department head has nothing to go on without it, so it is encouraged in
+    the UI and capped here.
+    """
+
+    reason = fields.String(required=False, allow_none=True, load_default=None)
+
+    @validates("reason")
+    def validate_reason(self, value, **kwargs):
+        if value is None:
+            return
+
+        if len(value.strip()) and len(value.strip()) < 5:
+            raise ValidationError("Give at least 5 characters, or leave it blank.")
+
+        if len(value) > 500:
+            raise ValidationError("Reason cannot exceed 500 characters.")
+
 
 class CreateReviewReportSchema(Schema):
     """

@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from marshmallow import ValidationError
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from app.models import UserRole
+from app.models import UserRole, DisputeOutcome
 from app.middleware import role_required
 from app.schemas import (
     ComplaintSchema,
@@ -13,6 +13,8 @@ from app.schemas import (
     ReopenComplaintSchema,
     DepartmentSuggestionSchema,
     LinkComplaintSchema,
+    DisputeClusterSchema,
+    ResolveDisputeSchema,
 )
 from app.services import ComplaintService
 from app.utils import validate_images
@@ -60,24 +62,83 @@ def suggest_department():
         return jsonify({"success": False, "errors": err.messages}), 422
 
 
+@complaint_bp.get("/<uuid:complaint_id>/cluster")
+@jwt_required()
+def get_cluster_members(complaint_id):
+    """
+    Every complaint linked to the same real-world issue as this one, primary
+    first. An unclustered complaint comes back as a single-item list.
+    """
+    try:
+        members = ComplaintService.get_cluster_members(complaint_id)
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "data": ComplaintResponseSchema(many=True).dump(members),
+                }
+            ),
+            200,
+        )
+    except ValueError as err:
+        return jsonify({"success": False, "message": str(err)}), 404
+
+
 @complaint_bp.post("/<uuid:complaint_id>/cluster/dispute")
 @jwt_required()
 @role_required(UserRole.CITIZEN)
 def dispute_cluster(complaint_id):
     try:
-        complaint = ComplaintService.dispute_cluster(complaint_id)
+        data = DisputeClusterSchema().load(request.get_json() or {})
+        complaint = ComplaintService.dispute_cluster(complaint_id, data["reason"])
         return (
             jsonify(
                 {
                     "success": True,
-                    "message": "Grouping disputed.",
+                    "message": "Dispute raised.",
                     "data": ComplaintResponseSchema().dump(complaint),
                 }
             ),
             200,
         )
+    except ValidationError as err:
+        return jsonify({"success": False, "errors": err.messages}), 422
     except (ValueError, PermissionError) as err:
         return jsonify({"success": False, "message": str(err)}), 403
+
+
+@complaint_bp.post("/<uuid:complaint_id>/cluster/dispute/resolve")
+@jwt_required()
+@role_required(UserRole.ADMIN, UserRole.OFFICER)
+def resolve_dispute(complaint_id):
+    """
+    Staff settle an open dispute: `Upheld` splits the complaint back out into
+    its own issue, `Rejected` keeps it linked. Either way the outcome, note and
+    resolver are recorded and the reporter is notified.
+    """
+    try:
+        data = ResolveDisputeSchema().load(request.get_json() or {})
+        complaint = ComplaintService.resolve_dispute(
+            complaint_id,
+            DisputeOutcome(data["outcome"]),
+            data.get("note"),
+        )
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Dispute resolved.",
+                    "data": ComplaintResponseSchema().dump(complaint),
+                }
+            ),
+            200,
+        )
+    except ValidationError as err:
+        return jsonify({"success": False, "errors": err.messages}), 422
+    except PermissionError as err:
+        return jsonify({"success": False, "message": str(err)}), 403
+    except ValueError as err:
+        return jsonify({"success": False, "message": str(err)}), 400
 
 
 @complaint_bp.post("/<uuid:complaint_id>/cluster/link")
