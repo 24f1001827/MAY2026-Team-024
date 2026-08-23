@@ -159,13 +159,22 @@ class ComplaintService:
             })
 
     @staticmethod
-    def _cluster_complaint(complaint):
-        """Attach to the closest high-confidence issue, or start a new issue."""
+    def _cluster_complaint(complaint, exclude_cluster_ids=None):
+        """
+        Attach to the closest high-confidence issue, or start a new issue.
+
+        `exclude_cluster_ids` keeps specific issues off the table. Unlinking
+        passes the issue it just left: a human (or an upheld dispute) has said
+        "this is not that issue", and without this the duplicate detector would
+        score it as a match all over again and silently re-attach it.
+        """
         ComplaintService._lock_cluster_bucket(complaint)
         candidates = ComplaintRepository.get_cluster_candidates(
             complaint.locality.strip().lower(), complaint.city.strip().lower(), complaint.pincode.strip(), complaint.id,
             limit=int(os.getenv("DUPLICATE_MAX_CANDIDATES", "20")),
         )
+        excluded = exclude_cluster_ids or set()
+        candidates = [item for item in candidates if item.cluster_id not in excluded]
         candidates = [item for item in candidates if ComplaintIntelligenceService.passes_distance_filter(complaint, item)]
         scored = [(ComplaintIntelligenceService.duplicate_score(complaint, item), item) for item in candidates]
         scored = [(score, item) for score, item in scored if score is not None]
@@ -502,7 +511,12 @@ class ComplaintService:
                 raise PermissionError("Officers can unlink complaints only within their department.")
         complaint.cluster_id = None
         complaint.cluster_disputed = False
-        ComplaintService._cluster_complaint(complaint)
+        # Never straight back into the issue it was just pulled out of — the
+        # unlink is a human decision that outranks the similarity score. It may
+        # still join a *different* nearby issue, or start its own.
+        ComplaintService._cluster_complaint(
+            complaint, exclude_cluster_ids={old_cluster.id}
+        )
         ComplaintService._refresh_cluster(old_cluster)
         db.session.commit()
         return complaint
