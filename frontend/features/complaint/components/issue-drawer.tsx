@@ -24,6 +24,7 @@ import {
 import { Input } from "@/components/shadcn/input"
 import { Label } from "@/components/shadcn/label"
 import { NativeSelect } from "@/components/shadcn/native-select"
+import { Spinner } from "@/components/shadcn/spinner"
 import { Textarea } from "@/components/shadcn/textarea"
 import {
   useAllComplaints,
@@ -63,12 +64,16 @@ function MemberRow({
   canUnlink,
   onUnlink,
   pending,
+  unlinking,
 }: {
   member: Complaint
   isCurrent: boolean
   canUnlink: boolean
   onUnlink: () => void
+  /** Any action is in flight — every row's button is disabled. */
   pending: boolean
+  /** *This* row is the one being unlinked — it gets the spinner. */
+  unlinking: boolean
 }) {
   return (
     <li
@@ -123,8 +128,17 @@ function MemberRow({
             disabled={pending}
             onClick={onUnlink}
           >
-            <HugeiconsIcon icon={LinkBackwardIcon} size={14} />
-            Unlink
+            {unlinking ? (
+              <>
+                <Spinner className="size-3.5" />
+                Unlinking…
+              </>
+            ) : (
+              <>
+                <HugeiconsIcon icon={LinkBackwardIcon} size={14} />
+                Unlink
+              </>
+            )}
           </Button>
         )}
       </div>
@@ -162,6 +176,13 @@ export function IssueDrawer({
     resolveDispute.isPending ||
     linkCluster.isPending ||
     unlinkCluster.isPending
+
+  // React Query exposes the in-flight arguments, so the spinner can land on the
+  // exact row being acted on rather than blanking the whole list.
+  const unlinkingId = unlinkCluster.isPending ? unlinkCluster.variables : null
+  const linkingId = linkCluster.isPending
+    ? linkCluster.variables?.targetComplaintId
+    : null
 
   const [disputeReason, setDisputeReason] = useState("")
   const [resolutionOutcome, setResolutionOutcome] =
@@ -247,6 +268,21 @@ export function IssueDrawer({
               ? "Loading Linked Complaints…"
               : `${list.length} complaint${list.length === 1 ? "" : "s"} reporting this issue.`}
           </DrawerDescription>
+          {/* Announces the in-flight action; hidden (but still read out) when
+              nothing is running, so the header doesn't jump around. */}
+          <DrawerDescription
+            aria-live="polite"
+            className={busy ? "flex items-center gap-1.5 text-brand" : "sr-only"}
+          >
+            {busy ? (
+              <>
+                <Spinner className="size-3" />
+                Updating this issue…
+              </>
+            ) : (
+              ""
+            )}
+          </DrawerDescription>
         </DrawerHeader>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 pb-4">
@@ -297,7 +333,14 @@ export function IssueDrawer({
                     disabled={busy}
                     onClick={handleResolve}
                   >
-                    {resolveDispute.isPending ? "Resolving…" : "Resolve dispute"}
+                    {resolveDispute.isPending ? (
+                      <>
+                        <Spinner className="size-3.5" />
+                        Resolving…
+                      </>
+                    ) : (
+                      "Resolve dispute"
+                    )}
                   </Button>
                 </div>
               )}
@@ -358,6 +401,7 @@ export function IssueDrawer({
                     isCurrent={member.id === complaint.id}
                     canUnlink={isStaff}
                     pending={busy}
+                    unlinking={unlinkingId === member.id}
                     onUnlink={() => handleUnlink(member.id)}
                   />
                 ))}
@@ -371,6 +415,7 @@ export function IssueDrawer({
               {linkOpen ? (
                 <LinkPicker
                   currentRole={currentRole}
+                  linkingId={linkingId}
                   excludeIds={list.map((member) => member.id)}
                   query={linkQuery}
                   onQueryChange={setLinkQuery}
@@ -415,7 +460,14 @@ export function IssueDrawer({
                 disabled={busy}
                 onClick={handleDispute}
               >
-                {disputeCluster.isPending ? "Submitting…" : "Dispute this link"}
+                {disputeCluster.isPending ? (
+                  <>
+                    <Spinner className="size-3.5" />
+                    Submitting…
+                  </>
+                ) : (
+                  "Dispute this link"
+                )}
               </Button>
             </section>
           )}
@@ -440,6 +492,7 @@ export function IssueDrawer({
  */
 function LinkPicker({
   currentRole,
+  linkingId,
   excludeIds,
   query,
   onQueryChange,
@@ -448,6 +501,8 @@ function LinkPicker({
   pending,
 }: {
   currentRole?: UserRole
+  /** The complaint whose issue we're joining right now, if a link is running. */
+  linkingId?: string | null
   excludeIds: string[]
   query: string
   onQueryChange: (value: string) => void
@@ -521,13 +576,20 @@ function LinkPicker({
                 type="button"
                 disabled={pending}
                 onClick={() => onPick(item.id)}
-                className="w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted disabled:opacity-50"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted disabled:opacity-50"
               >
-                <span className="block truncate text-sm text-foreground">
-                  {item.title}
-                </span>
-                <span className="block text-xs text-muted-foreground">
-                  {item.locality} · #{item.id.slice(0, 8)}
+                {linkingId === item.id && (
+                  <Spinner className="size-3.5 shrink-0 text-brand" />
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm text-foreground">
+                    {item.title}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {linkingId === item.id
+                      ? "Linking…"
+                      : `${item.locality} · #${item.id.slice(0, 8)}`}
+                  </span>
                 </span>
               </button>
             </li>
