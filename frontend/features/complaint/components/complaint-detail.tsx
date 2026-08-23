@@ -41,7 +41,7 @@ import { PageHeader } from "@/features/common/components/page-header"
 import { OfficerTenderSection } from "@/features/tender/components/officer-tender-section"
 import { ComplaintLifecycleActions } from "@/features/complaint/components/complaint-lifecycle-actions"
 import { IssueDrawer } from "@/features/complaint/components/issue-drawer"
-import { useAddRemark } from "@/hooks/complaint"
+import { useAddRemark, useUnlinkCluster } from "@/hooks/complaint"
 import { ApiError } from "@/lib/api/api-client"
 import { cn } from "@/lib/utils"
 import { routes } from "@/nav"
@@ -116,6 +116,30 @@ export function ComplaintDetail({
   const [issueOpen, setIssueOpen] = useState(false)
   const [remarkMessage, setRemarkMessage] = useState("")
   const addRemark = useAddRemark()
+  const unlinkCluster = useUnlinkCluster()
+
+  // Only staff may detach a complaint from its issue (backend enforces this).
+  const canUnlink =
+    !readOnly && (currentRole === "Admin" || currentRole === "Officer")
+
+  async function handleUnlink() {
+    try {
+      const updated = await unlinkCluster.mutateAsync(complaint.id)
+      toast.success("Complaint unlinked", {
+        // A standalone complaint is the primary of its own one-member issue,
+        // so `clusterPrimaryTitle` echoes its own title — check the flag, not
+        // the title, to tell "moved elsewhere" from "now on its own".
+        description:
+          !updated.isClusterPrimary && updated.clusterPrimaryTitle
+            ? `It now sits under “${updated.clusterPrimaryTitle}” instead.`
+            : "It is now tracked as its own issue.",
+      })
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Couldn’t unlink the complaint.",
+      )
+    }
+  }
 
   // Newest first, regardless of the source ordering.
   const activity = [...initialRemarks].sort((a, b) =>
@@ -180,6 +204,56 @@ export function ComplaintDetail({
           )
         }
       />
+
+      {/* A linked (non-primary) complaint says so up front: which complaint it
+          sits under, and — for staff — a way to detach it without hunting
+          through the drawer. Citizens get the dispute route instead, since the
+          backend only lets staff unlink. */}
+      {!readOnly &&
+        !complaint.isClusterPrimary &&
+        complaint.clusterPrimaryId &&
+        complaint.clusterPrimaryTitle && (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3">
+            <HugeiconsIcon
+              icon={Link01Icon}
+              className="size-4 shrink-0 text-muted-foreground"
+            />
+            <p className="min-w-0 flex-1 text-sm text-foreground">
+              Linked to{" "}
+              <Link
+                href={routes.complaints.detail(complaint.clusterPrimaryId).href}
+                className="font-medium text-brand underline-offset-4 hover:underline"
+              >
+                {complaint.clusterPrimaryTitle}
+              </Link>
+              <span className="text-muted-foreground">
+                {" "}
+                — handled as one issue with{" "}
+                {complaint.clusterReportCount - 1} other complaint
+                {complaint.clusterReportCount === 2 ? "" : "s"}.
+              </span>
+            </p>
+            <span className="flex shrink-0 items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setIssueOpen(true)}
+              >
+                View issue
+              </Button>
+              {canUnlink && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={unlinkCluster.isPending}
+                  onClick={handleUnlink}
+                >
+                  {unlinkCluster.isPending ? "Unlinking…" : "Unlink"}
+                </Button>
+              )}
+            </span>
+          </div>
+        )}
 
       <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
         {/* Main column */}
