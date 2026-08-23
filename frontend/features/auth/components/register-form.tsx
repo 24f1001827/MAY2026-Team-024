@@ -19,6 +19,7 @@ import type { IconSvgElement } from "@hugeicons/react"
 import { Button } from "@/components/shadcn/button"
 import { Input } from "@/components/shadcn/input"
 import { NativeSelect } from "@/components/shadcn/native-select"
+import { NumericInput } from "@/components/shadcn/numeric-input"
 import { AuthShell, AuthAside } from "@/features/auth/components/auth-shell"
 import { useRegister } from "@/hooks/auth"
 import { usePublicDepartments } from "@/hooks/department"
@@ -262,13 +263,15 @@ export function RegisterForm({ role }: { role: RegisterRole }) {
                 icon={SmartPhone01Icon}
                 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
               />
-              <Input
+              <NumericInput
                 id="phone"
                 name="phone"
-                type="tel"
                 autoComplete="tel"
                 required
-                placeholder="+91 98000 00000"
+                maxDigits={10}
+                pattern="[6-9][0-9]{9}"
+                title="Enter a 10-digit mobile number starting with 6, 7, 8, or 9."
+                placeholder="9800000000"
                 className="pl-9"
               />
             </div>

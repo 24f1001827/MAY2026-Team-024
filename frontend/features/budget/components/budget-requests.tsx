@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/shadcn/dialog"
 import { Input } from "@/components/shadcn/input"
+import { NumericInput } from "@/components/shadcn/numeric-input"
 import { Label } from "@/components/shadcn/label"
 import { Textarea } from "@/components/shadcn/textarea"
 import {
@@ -187,10 +188,8 @@ export function BudgetRequests() {
           <form onSubmit={handleAllocate} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="reqAmount">Amount (₹)</Label>
-              <Input
+              <NumericInput
                 id="reqAmount"
-                type="number"
-                min="1"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="e.g. 2500000"

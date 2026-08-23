@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/shadcn/button"
 import { Card, CardContent, CardHeader } from "@/components/shadcn/card"
 import { Input } from "@/components/shadcn/input"
+import { NumericInput } from "@/components/shadcn/numeric-input"
 import {
   Empty,
   EmptyDescription,
@@ -443,11 +444,9 @@ export function UsersTable({
           <form onSubmit={submitWorkload} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="maxWorkload">Maximum concurrent cases</Label>
-              <Input
+              <NumericInput
                 id="maxWorkload"
-                type="number"
-                min={workloadTarget?.currentWorkload ?? 1}
-                step={1}
+                maxDigits={4}
                 value={workloadValue}
                 onChange={(e) => setWorkloadValue(e.target.value)}
                 placeholder="e.g. 10"
