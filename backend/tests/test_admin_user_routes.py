@@ -40,17 +40,39 @@ def test_get_users_rejects_invalid_role(client, admin_headers):
 
 def test_update_user_status_success(client, admin_headers):
     user_id = uuid.uuid4()
+
     user = MagicMock()
-    with patch("app.routes.admin_user_route.update_status_schema.load", return_value={"status": "active"}), \
-         patch("app.routes.admin_user_route.AdminUserService.update_user_status", return_value=user) as service, \
-         patch("app.routes.admin_user_route.UserResponseSchema") as response_schema:
-        response_schema.return_value.dump.return_value = {"id": str(user_id), "status": "active"}
-        response = client.patch(f"/api/v1/admin/users/{user_id}/status", headers=admin_headers, json={"status": "active"})
+    user.role = UserRole.CITIZEN
+    user.status = UserStatus.ACTIVE
+
+    with patch(
+        "app.routes.admin_user_route.update_status_schema.load",
+        return_value={"status": UserStatus.ACTIVE},
+    ), patch(
+        "app.routes.admin_user_route.AdminUserService.update_user_status",
+        return_value=(user, UserStatus.PENDING_APPROVAL),
+    ) as service, patch(
+        "app.routes.admin_user_route.UserResponseSchema"
+    ) as response_schema:
+        response_schema.return_value.dump.return_value = {
+            "id": str(user_id),
+            "status": "active",
+        }
+
+        response = client.patch(
+            f"/api/v1/admin/users/{user_id}/status",
+            headers=admin_headers,
+            json={"status": "active"},
+        )
 
     assert response.status_code == 200
     assert response.get_json()["success"] is True
     assert response.get_json()["data"]["status"] == "active"
-    service.assert_called_once_with(user_id, {"status": "active"})
+
+    service.assert_called_once_with(
+        user_id,
+        {"status": UserStatus.ACTIVE},
+    )
 
 def test_update_user_status_validation_error(client, admin_headers):
     user_id = uuid.uuid4()
@@ -62,16 +84,16 @@ def test_update_user_status_validation_error(client, admin_headers):
 
 def test_update_user_status_not_found(client, admin_headers):
     user_id = uuid.uuid4()
-    with patch("app.routes.admin_user_route.update_status_schema.load", return_value={"status": "active"}), \
+    with patch("app.routes.admin_user_route.update_status_schema.load", return_value={"status": UserStatus.ACTIVE}), \
          patch("app.routes.admin_user_route.AdminUserService.update_user_status", side_effect=ValueError("User not found.")):
         response = client.patch(f"/api/v1/admin/users/{user_id}/status", headers=admin_headers, json={"status": "active"})
 
-    assert response.status_code == 404
+    assert response.status_code == 400
     assert response.get_json()["message"] == "User not found."
 
 def test_update_user_status_server_error(client, admin_headers):
     user_id = uuid.uuid4()
-    with patch("app.routes.admin_user_route.update_status_schema.load", return_value={"status": "active"}), \
+    with patch("app.routes.admin_user_route.update_status_schema.load", return_value={"status": UserStatus.ACTIVE}), \
          patch("app.routes.admin_user_route.AdminUserService.update_user_status", side_effect=Exception("db down")):
         response = client.patch(f"/api/v1/admin/users/{user_id}/status", headers=admin_headers, json={"status": "active"})
     assert response.status_code == 500

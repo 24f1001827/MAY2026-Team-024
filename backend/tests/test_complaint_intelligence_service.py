@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 from app.models import ComplaintPriority
 from app.services.complaint_intelligence_service import ComplaintIntelligenceService
+from unittest.mock import patch
 
 
 def complaint(title, description, latitude=9.9312, longitude=76.2673, category="Roads", citizen_id="citizen-1"):
@@ -33,12 +34,28 @@ def test_department_suggestion_matches_descriptive_department_names():
         SimpleNamespace(id=2, name="Municipal Water Board"),
     ]
 
-    suggestion = ComplaintIntelligenceService.suggest_department(
-        "Large pothole", "A dangerous pothole has opened on the road.", departments
-    )
+    ai_result = {
+        "category": "Road damage",
+        "priority_score": 70,
+        "department_name": "City Roads Agency",
+        "confidence": 92,
+        "reason": "The complaint concerns a pothole on a road.",
+    }
+
+    with patch.object(
+        ComplaintIntelligenceService,
+        "_llm_analysis",
+        return_value=ai_result,
+    ):
+        suggestion = ComplaintIntelligenceService.suggest_department(
+            "Large pothole",
+            "A dangerous pothole has opened on the road.",
+            departments,
+        )
 
     assert suggestion["department_id"] == 1
     assert suggestion["department_name"] == "City Roads Agency"
+    assert suggestion["confidence"] == 92
 
 
 def test_similar_reports_score_higher_than_distant_different_reports():
