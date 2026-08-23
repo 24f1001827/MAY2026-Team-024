@@ -59,7 +59,8 @@ def test_create_complaint_success(
     mock_department_repo.get_by_name.return_value = department
     mock_complaint_repo.create.return_value = complaint
 
-    result = ComplaintService.create_complaint(complaint_data(), [])
+    with patch.object(ComplaintService, "_cluster_complaint"):
+     result = ComplaintService.create_complaint(complaint_data(), [])
 
     assert result == complaint
     mock_complaint_repo.create.assert_called_once_with(
@@ -117,7 +118,8 @@ def test_create_complaint_with_image(
     "public_id": "pothole-cloudinary-id",
     }
 
-    ComplaintService.create_complaint(complaint_data(), [image])
+    with patch.object(ComplaintService, "_cluster_complaint"):
+     ComplaintService.create_complaint(complaint_data(), [image])
 
     mock_upload_image.assert_called_once_with(image)
     mock_image_repo.create.assert_called_once_with(
@@ -193,8 +195,12 @@ def test_create_complaint_rolls_back_upload_failure(
     mock_complaint_repo.create.return_value = make_complaint()
     mock_upload_image.side_effect = Exception("Cloudinary upload failed")
 
-    with pytest.raises(Exception, match="Cloudinary upload failed"):
-        ComplaintService.create_complaint(complaint_data(), [MagicMock()])
+    with patch.object(ComplaintService, "_cluster_complaint"):
+     with pytest.raises(Exception, match="Cloudinary upload failed"):
+        ComplaintService.create_complaint(
+            complaint_data(),
+            [MagicMock()],
+        )
 
     mock_db.rollback.assert_called_once()
     mock_db.commit.assert_not_called()

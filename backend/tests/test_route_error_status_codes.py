@@ -103,7 +103,7 @@ def test_endpoint_returns_422_for_invalid_required_input(client, request, method
 WRITE_SERVICE_CASES = [
     ("post", f"/api/v1/admin/complaints/{COMPLAINT_ID}/assign", "admin_headers", "app.routes.admin_complaint_route.AssignComplaintSchema", True, "app.routes.admin_complaint_route.AdminComplaintService.assign_complaint", 404),
     ("patch", f"/api/v1/admin/complaints/{COMPLAINT_ID}/allocate-budget", "admin_headers", "app.routes.admin_complaint_route.allocate_budget_schema", False, "app.routes.admin_complaint_route.AdminBudgetService.allocate_budget", 400),
-    ("patch", f"/api/v1/admin/users/{COMPLAINT_ID}/status", "admin_headers", "app.routes.admin_user_route.update_status_schema", False, "app.routes.admin_user_route.AdminUserService.update_user_status", 404),
+    ("patch", f"/api/v1/admin/users/{COMPLAINT_ID}/status", "admin_headers", "app.routes.admin_user_route.update_status_schema", False, "app.routes.admin_user_route.AdminUserService.update_user_status", 400),
     ("patch", "/api/v1/agency/work-orders/1/status", "agency_headers", "app.routes.agency_route.UpdateWorkOrderStatusSchema", True, "app.routes.agency_route.AgencyService.update_work_order_status", 400),
     ("put", f"/api/v1/complaints/{COMPLAINT_ID}", "citizen_headers", "app.routes.complaint_route.ComplaintSchema", True, "app.routes.complaint_route.ComplaintService.update_complaint", 404),
     ("post", f"/api/v1/officer/complaints/{COMPLAINT_ID}/review-report", "officer_headers", "app.routes.officer_route.create_review_report_schema", False, "app.routes.officer_route.OfficerService.submit_review_report", 400),
@@ -113,9 +113,13 @@ WRITE_SERVICE_CASES = [
 ]
 
 
-def _set_schema_to_valid(schema_mock, is_class):
+def _set_schema_to_valid(schema_mock, is_class, schema_target):
     schema = schema_mock.return_value if is_class else schema_mock
-    schema.load.return_value = {}
+
+    if schema_target.endswith("admin_user_route.update_status_schema"):
+        schema.load.return_value = {"status": "active"}
+    else:
+        schema.load.return_value = {}
 
 
 @pytest.mark.parametrize(
@@ -127,7 +131,7 @@ def test_write_endpoint_returns_documented_value_error_status(
 ):
     """Each write route maps a business ValueError to its documented response."""
     with patch(schema_target) as schema_mock, patch(service_target, side_effect=ValueError("expected test error")):
-        _set_schema_to_valid(schema_mock, is_class)
+        _set_schema_to_valid(schema_mock, is_class, schema_target)
         response = getattr(client, method)(path, headers=request.getfixturevalue(header_fixture), json={})
     assert response.status_code == expected_status
 
@@ -141,7 +145,7 @@ def test_write_endpoint_returns_500_when_service_fails(
 ):
     """Each write route maps an unexpected service failure to HTTP 500."""
     with patch(schema_target) as schema_mock, patch(service_target, side_effect=RuntimeError("unexpected test error")):
-        _set_schema_to_valid(schema_mock, is_class)
+        _set_schema_to_valid(schema_mock, is_class, schema_target)
         response = getattr(client, method)(path, headers=request.getfixturevalue(header_fixture), json={})
     assert response.status_code == 500
 

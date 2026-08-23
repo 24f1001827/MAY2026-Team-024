@@ -13,3 +13,8 @@ __pycache__/
 .pytest_cache/
 
 .mypy_cache/
+
+backend/venv/
+backend/.coverage
+backend/pytest_result.txt
+frontend/package-lock.json

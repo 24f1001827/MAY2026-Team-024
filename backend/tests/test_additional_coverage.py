@@ -49,18 +49,68 @@ def test_officer_service_rejects_missing_work_order(mock_officers, mock_orders):
         OfficerService.verify_work_order("officer-1", 1)
 
 
+@patch("app.services.officer_service.ComplaintService.notify_cluster_citizens")
+@patch("app.services.officer_service.NotificationService.create_notification")
+@patch("app.services.officer_service.User")
+@patch("app.services.officer_service.auto_close_complaint.apply_async")
 @patch("app.services.officer_service.db.session")
 @patch("app.services.officer_service.ComplaintAssignmentRepository")
 @patch("app.services.officer_service.WorkOrderRepository")
 @patch("app.services.officer_service.OfficerRepository")
-def test_officer_service_verifies_completed_work_order(mock_officers, mock_orders, mock_assignments, mock_db):
-    officer=MagicMock(user_id="officer-1")
-    order=MagicMock(status=WorkOrderStatus.COMPLETED, completion_proof_url="proof", tender=MagicMock(complaint=MagicMock()))
-    mock_officers.get_by_user_id.return_value=officer; mock_orders.get_by_id.return_value=order; mock_assignments.get_by_officer_and_complaint.return_value=MagicMock()
-    assert OfficerService.verify_work_order("officer-1",1) == order
+def test_officer_service_verifies_completed_work_order(
+    mock_officers,
+    mock_orders,
+    mock_assignments,
+    mock_db,
+    mock_auto_close,
+    mock_users,
+    mock_notifications,
+    mock_cluster_notifications,
+    app,
+):
+    officer = MagicMock(user_id="officer-1")
+    complaint = MagicMock(
+        id="complaint-1",
+        citizen_id="citizen-1",
+        title="Pothole",
+    )
+    complaint.status = ComplaintStatus.WORK_IN_PROGRESS
+
+    order = MagicMock(
+        status=WorkOrderStatus.COMPLETED,
+        completion_proof_url="proof",
+        tender=MagicMock(
+            complaint=complaint,
+            complaint_id="complaint-1",
+        ),
+    )
+
+    mock_officers.get_by_user_id.return_value = officer
+    mock_orders.get_by_id.return_value = order
+    mock_assignments.get_by_officer_and_complaint.return_value = MagicMock(
+        complaint=complaint,
+    )
+    mock_users.query.filter_by.return_value.first.return_value = MagicMock(
+        id="admin-1"
+    )
+
+    with app.app_context():
+        app.config["COMPLAINT_AUTO_CLOSE_SECONDS"] = 30
+
+        result = OfficerService.verify_work_order(
+            "officer-1",
+            1,
+        )
+
+    assert result == order
     assert order.status == WorkOrderStatus.VERIFIED
-    assert order.tender.complaint.status == ComplaintStatus.RESOLVED
+    assert complaint.status == ComplaintStatus.RESOLVED
     assert mock_db.commit.call_count >= 1
+
+    mock_auto_close.assert_called_once_with(
+        args=["complaint-1"],
+        countdown=30,
+    )
 
 
 @patch("app.utils.admin_create.User")

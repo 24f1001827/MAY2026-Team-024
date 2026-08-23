@@ -154,9 +154,17 @@ def test_get_all_users_passes_filters_to_repository(mock_users):
 
 @patch("app.services.admin_user_service.UserRepository")
 def test_update_user_status_success(mock_users):
-    user = MagicMock(role=UserRole.CITIZEN, status=UserStatus.PENDING_APPROVAL); mock_users.get_by_id.return_value = user
-    result = AdminUserService.update_user_status("user-1", {"status": UserStatus.ACTIVE})
-    assert result == user and user.status == UserStatus.ACTIVE
+    user = MagicMock()
+    user.role = UserRole.CITIZEN
+    user.status = UserStatus.PENDING_APPROVAL; mock_users.get_by_id.return_value = user
+    result, previous_status = AdminUserService.update_user_status(
+    "user-1",
+    {"status": UserStatus.ACTIVE},
+)
+
+    assert result == user
+    assert previous_status == UserStatus.PENDING_APPROVAL
+    assert user.status == UserStatus.ACTIVE
     mock_users.update.assert_called_once()
 
 
