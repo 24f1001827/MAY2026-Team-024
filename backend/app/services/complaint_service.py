@@ -34,6 +34,8 @@ from app.services.activity_service import ActivityService
 from app.services.complaint_intelligence_service import ComplaintIntelligenceService
 from sqlalchemy import text
 
+from app.models import User
+
 
 class ComplaintService:
     """
@@ -1068,19 +1070,14 @@ class ComplaintService:
         # Admin notification
         # --------------------------------
 
-        admins = UserRepository.get_all(
-            role=UserRole.ADMIN,
-        )
-
-        for admin in admins:
-
-            NotificationService.create_notification(
-                {
-                    "user_id": admin.id,
-                    "type": NotificationType.COMPLAINT_CLOSURE,
-                    "title": "Complaint Automatically Closed",
-                    "message": (
-                        f"Complaint '{complaint.title}' "
+        admin=User.query.filter_by(role=UserRole.ADMIN).first()
+        NotificationService.create_notification(
+            {
+                "user_id": admin.id,
+                "type": NotificationType.COMPLAINT_CLOSURE,
+                "title": "Complaint Automatically Closed",
+                "message": (
+                    f"Complaint '{complaint.title}' "
                         "has been automatically closed by the system."
                     ),
                 }
