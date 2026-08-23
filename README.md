@@ -27,30 +27,28 @@ To setup the frontend in the local environment,
 git clone git@github.com:24f1001827/MAY2026-Team-024.git
 ```
 
-2. Install Dependanceies
+2. Install dependencies
+
+**Bun only.** `package.json` runs `only-allow bun` on preinstall, so `npm`,
+`pnpm` and `yarn` are rejected.
 
 ```bash
 cd frontend
-```
-```bash
-npm install
-# or
-yarn install
-# or
-pnpm install
-# or
 bun install
 ```
 
-3. Run the development server:
+3. Configure environment variables
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+cp .env.example .env.local
+```
+
+Set `API_BASE_URL` to the backend and `JWT_SECRET_KEY` to the **same value as the
+backend's**. See [`frontend/README.md`](./frontend/README.md) for the full table.
+
+4. Run the development server:
+
+```bash
 bun dev
 ```
 
@@ -98,67 +96,16 @@ pip install -r requirements.txt
 
 ### 4. Configure Environment Variables
 
-Create a `.env` file.
-
-Example:
-
-```env
-# ==========================
-# Flask
-# ==========================
-
-FLASK_APP=run.py
-FLASK_ENV=1
-
-SECRET_KEY=
-JWT_SECRET_KEY=
-
-# ==========================
-# PostgreSQL
-# ==========================
-
-POSTGRES_USER=
-POSTGRES_PASSWORD=
-POSTGRES_DB=civic_connect
-
-DATABASE_URI=
-
-# ==========================
-# Google OAuth
-# ==========================
-
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-
-# ==========================
-# Cloudinary
-# ==========================
-
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-
-# ==========================
-# Celery
-# ==========================
-
-CELERY_BROKER_URL=
-CELERY_RESULT_BACKEND=
-
-# ==========================
-# Flask-Mail
-# ==========================
-
-MAIL_SERVER=
-MAIL_PORT=
-MAIL_USE_TLS=
-MAIL_USERNAME=
-MAIL_PASSWORD=
-MAIL_DEFAULT_SENDER=
+```bash
+cp .env.example .env
 ```
 
----
+Fill in the values. The example file is the source of truth for the full list —
+Flask secrets, Postgres, Google OAuth, Cloudinary, Celery, Flask-Mail, the LLM
+provider keys, and the duplicate-detection thresholds. `backend/README.md`
+explains the ones that need care.
 
+---
 
 ## Database & Redis Setup
 
@@ -178,24 +125,16 @@ docker ps
 
 ### Once PostgreSQL is running, apply the database migrations:
 
-
-Initialize migrations (only once)
-
-```bash
-flask db init
-```
-
-Create migration
-
-```bash
-flask db migrate -m "Initial migration"
-```
-
-Apply migration
+`migrations/` is already committed. **Do not run `flask db init`** — it recreates
+the directory and discards the revision history. A fresh database needs only:
 
 ```bash
 flask db upgrade
 ```
+
+Run `flask db migrate -m "..."` only after changing a model. See
+[`backend/README.md`](./backend/README.md) for troubleshooting, including what to
+do about `relation already exists`.
 
 ---
 
