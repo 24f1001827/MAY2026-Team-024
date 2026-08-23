@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/shadcn/dialog"
 import { Input } from "@/components/shadcn/input"
+import { NumericInput } from "@/components/shadcn/numeric-input"
 import { Label } from "@/components/shadcn/label"
 import { NativeSelect } from "@/components/shadcn/native-select"
 import { Textarea } from "@/components/shadcn/textarea"
@@ -311,10 +312,8 @@ function ReviewReportDialog({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="cost">Estimated cost (₹)</Label>
-                <Input
+                <NumericInput
                   id="cost"
-                  type="number"
-                  min="0"
                   value={cost}
                   onChange={(e) => setCost(e.target.value)}
                   placeholder="Optional"
@@ -322,10 +321,9 @@ function ReviewReportDialog({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="days">Duration (days)</Label>
-                <Input
+                <NumericInput
                   id="days"
-                  type="number"
-                  min="0"
+                  maxDigits={4}
                   value={days}
                   onChange={(e) => setDays(e.target.value)}
                   placeholder="Optional"
@@ -388,10 +386,8 @@ function AllocateBudgetDialog({
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="amount">Amount (₹)</Label>
-            <Input
+            <NumericInput
               id="amount"
-              type="number"
-              min="1"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="e.g. 2500000"

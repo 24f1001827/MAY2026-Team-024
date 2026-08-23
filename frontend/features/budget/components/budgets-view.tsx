@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/shadcn/dialog"
 import { Input } from "@/components/shadcn/input"
+import { NumericInput } from "@/components/shadcn/numeric-input"
 import { Label } from "@/components/shadcn/label"
 import { NativeSelect } from "@/components/shadcn/native-select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shadcn/tabs"
@@ -342,10 +343,8 @@ export function BudgetsView() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="amt">Amount (₹)</Label>
-                <Input
+                <NumericInput
                   id="amt"
-                  type="number"
-                  min="1"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="e.g. 5000000"

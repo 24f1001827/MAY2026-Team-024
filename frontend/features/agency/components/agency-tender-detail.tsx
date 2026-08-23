@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/shadcn/dialog"
 import { Input } from "@/components/shadcn/input"
+import { NumericInput } from "@/components/shadcn/numeric-input"
 import { Label } from "@/components/shadcn/label"
 import { Textarea } from "@/components/shadcn/textarea"
 import { Skeleton } from "@/components/shadcn/skeleton"
@@ -259,11 +260,8 @@ export function AgencyTenderDetail({ id }: { id: number }) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="amount">Proposal amount (₹)</Label>
-              <Input
+              <NumericInput
                 id="amount"
-                type="number"
-                min="1"
-                step="1"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="e.g. 2500000"

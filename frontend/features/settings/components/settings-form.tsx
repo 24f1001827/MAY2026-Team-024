@@ -3,6 +3,7 @@
 import { Button } from "@/components/shadcn/button"
 import { Input } from "@/components/shadcn/input"
 import { Label } from "@/components/shadcn/label"
+import { NumericInput } from "@/components/shadcn/numeric-input"
 import { PageHeader } from "@/features/common/components/page-header"
 import { toast } from "@/lib/styles/toast-styles"
 import { AllotmentSettings } from "@/features/settings/components/allotment-settings"
@@ -71,11 +72,14 @@ export function SettingsForm({
             />
           </Field>
           <Field label="Phone" htmlFor="phone">
-            <Input
+            <NumericInput
               id="phone"
               name="phone"
-              type="tel"
+              autoComplete="tel"
               required
+              maxDigits={10}
+              pattern="[6-9][0-9]{9}"
+              title="Enter a 10-digit mobile number starting with 6, 7, 8, or 9."
               defaultValue={user.phone}
             />
           </Field>

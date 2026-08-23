@@ -69,6 +69,17 @@ export function LocationPicker({
     return Number.isNaN(n) ? null : n
   }
 
+  /**
+   * `<input type="number">` accepts exponent notation, which reads as text in a
+   * coordinate box and silently resolves to an empty value. Sign and decimal
+   * point stay allowed — coordinates need both.
+   */
+  function blockExponent(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "e" || event.key === "E" || event.key === "+") {
+      event.preventDefault()
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
@@ -81,6 +92,7 @@ export function LocationPicker({
           inputMode="decimal"
           value={lat ?? ""}
           onChange={(e) => onChange(parse(e.target.value), lng)}
+          onKeyDown={blockExponent}
           placeholder="9.9535"
         />
       </div>
@@ -95,6 +107,7 @@ export function LocationPicker({
           inputMode="decimal"
           value={lng ?? ""}
           onChange={(e) => onChange(lat, parse(e.target.value))}
+          onKeyDown={blockExponent}
           placeholder="76.2673"
         />
       </div>
