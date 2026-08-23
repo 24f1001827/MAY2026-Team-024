@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Building03Icon,
+  CancelCircleIcon,
+  CheckmarkCircle02Icon,
   LockPasswordIcon,
   Mail01Icon,
   ShieldUserIcon,
@@ -22,6 +24,11 @@ import { NativeSelect } from "@/components/shadcn/native-select"
 import { NumericInput } from "@/components/shadcn/numeric-input"
 import { AuthShell, AuthAside } from "@/features/auth/components/auth-shell"
 import { useRegister } from "@/hooks/auth"
+import {
+  checkPassword,
+  PASSWORD_MIN_LENGTH,
+  validateRegisterInput,
+} from "@/lib/utils/auth/validate"
 import { usePublicDepartments } from "@/hooks/department"
 import { toast } from "@/lib/styles/toast-styles"
 import { publicRoutes } from "@/nav"
@@ -90,6 +97,42 @@ function Field({
 }
 
 /**
+ * Live password requirement checklist. The backend reports only the first
+ * failing rule, so showing all of them at once is the difference between one
+ * correction and five round-trips.
+ */
+function PasswordRequirements({
+  rules,
+  show,
+}: {
+  rules: { rule: { id: string; label: string }; met: boolean }[]
+  show: boolean
+}) {
+  return (
+    <ul className="mt-2 space-y-1" aria-live="polite">
+      {rules.map(({ rule, met }) => (
+        <li
+          key={rule.id}
+          className={`flex items-center gap-1.5 text-xs ${
+            met
+              ? "text-emerald-600 dark:text-emerald-400"
+              : show
+                ? "text-destructive"
+                : "text-muted-foreground"
+          }`}
+        >
+          <HugeiconsIcon
+            icon={met ? CheckmarkCircle02Icon : CancelCircleIcon}
+            className="size-3.5 shrink-0"
+          />
+          <span>{rule.label}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/**
  * Officer-only department picker. Fetches the real department list from the
  * public endpoint so the submitted `department` name matches a row the backend
  * can resolve (`DepartmentRepository.get_by_name`). Only mounted for the
@@ -137,7 +180,14 @@ export function RegisterForm({ role }: { role: RegisterRole }) {
   const config = ROLE_CONFIG[role]
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
+  const [password, setPassword] = useState("")
+  // The checklist stays quiet until the field has been used or a submit was
+  // rejected, so an untouched form doesn't open covered in red.
+  const [passwordTouched, setPasswordTouched] = useState(false)
   const register = useRegister()
+
+  const passwordRules = checkPassword(password)
+  const passwordReady = passwordRules.every((entry) => entry.met)
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -153,6 +203,26 @@ export function RegisterForm({ role }: { role: RegisterRole }) {
       phone: str("phone"),
       password: String(data.get("password") ?? ""),
     }
+    // Validate everything client-side (mirrors the backend) so the user gets a
+    // specific message without a round-trip 422 — and, for the password, sees
+    // every unmet requirement in the checklist rather than one per attempt.
+    const fieldError = validateRegisterInput({
+      ...base,
+      ...(role === "Officer" ? { department: str("department") } : {}),
+      ...(role === "Agency"
+        ? {
+            contactPerson: str("contactPerson"),
+            registrationNumber: str("registrationNumber"),
+            licenseNumber: str("licenseNumber"),
+          }
+        : {}),
+    })
+    if (fieldError) {
+      setPasswordTouched(true)
+      toast.error("Check your details", { description: fieldError })
+      return
+    }
+
     const input: RegisterInput =
       role === "Officer"
         ? { role: "officer", payload: { ...base, department: str("department") } }
@@ -312,8 +382,13 @@ export function RegisterForm({ role }: { role: RegisterRole }) {
                 type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 required
-                minLength={8}
-                placeholder="At least 8 characters"
+                minLength={PASSWORD_MIN_LENGTH}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                onBlur={() => setPasswordTouched(true)}
+                aria-invalid={passwordTouched && !passwordReady}
+                aria-describedby="password-requirements"
+                placeholder={`At least ${PASSWORD_MIN_LENGTH} characters`}
                 className="px-9"
               />
               <button
@@ -327,6 +402,12 @@ export function RegisterForm({ role }: { role: RegisterRole }) {
                   className="size-4"
                 />
               </button>
+            </div>
+            <div id="password-requirements">
+              <PasswordRequirements
+                rules={passwordRules}
+                show={passwordTouched}
+              />
             </div>
           </Field>
 
