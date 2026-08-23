@@ -28,7 +28,11 @@ const toastStyles = {
   },
 } as const
 
-type ToastOptions = { description?: string }
+type ToastOptions = {
+  description?: string
+  /** Optional button in the toast, e.g. to accept a suggested correction. */
+  action?: { label: string; onClick: () => void }
+}
 
 export const toast = {
   success: (message: string, options?: ToastOptions) =>

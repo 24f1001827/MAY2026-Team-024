@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils"
 import { CreatablePincode } from "./creatable-pincode"
 
 /** Country is fixed for this product — citizens report issues within India. */
-const COUNTRY = "India"
+export const COUNTRY = "India"
 
 export interface LocationValue {
   country: string
@@ -40,11 +40,20 @@ export interface LocationValue {
   pincode: string
 }
 
+/** A blank address, for initial state and resets. */
+export const EMPTY_LOCATION: LocationValue = {
+  country: COUNTRY,
+  state: "",
+  district: "",
+  city: "",
+  pincode: "",
+}
+
 export interface IndiaIssueLocationFormProps {
-  /** Pre-fill (e.g. when editing an existing complaint). */
-  defaultValue?: Partial<Omit<LocationValue, "country">>
-  /** Notified on every field change with the full current location. */
-  onChange?: (value: LocationValue) => void
+  /** The current address. Controlled — the parent owns this state. */
+  value: LocationValue
+  /** Fires with the full next address on every field change. */
+  onChange: (value: LocationValue) => void
 }
 
 /** Empty option for a labelled combobox field. */
@@ -147,45 +156,49 @@ function SelectCombobox({
 }
 
 /**
+ * An option list together with the address path it was fetched for. Pairing the
+ * two makes "still loading" a derived value (`fetchedFor !== currentPath`)
+ * rather than a flag every handler has to remember to raise — which matters now
+ * that the address can also change from outside, when the map pin resolves to
+ * one.
+ */
+interface Options {
+  fetchedFor: string
+  items: string[]
+}
+
+/** Sentinel path no real selection can produce, so nothing reads as fetched. */
+const NOT_FETCHED: Options = { fetchedFor: "<none>", items: [] }
+
+/**
  * Cascading India address picker: Country (fixed) → State → District →
  * City/Sub-district → PIN code. Each level unlocks the next and resets every
  * downstream field. Option lists load lazily from server actions so the postal
  * dataset stays off the client. Renders hidden inputs (`country`, `state`,
- * `district`, `city`, `pincode`) so it drops into a parent `<form>` — and can
- * be driven via `onChange` for controlled use.
+ * `district`, `city`, `pincode`) so it still submits with a native form.
+ *
+ * Fully controlled: the parent owns the address so the map picker can push a
+ * reverse-geocoded one in. See `ComplaintForm` for that reconciliation.
  */
 export function IndiaIssueLocationForm({
-  defaultValue,
+  value,
   onChange,
 }: IndiaIssueLocationFormProps) {
-  const [state, setState] = useState(defaultValue?.state ?? "")
-  const [district, setDistrict] = useState(defaultValue?.district ?? "")
-  const [city, setCity] = useState(defaultValue?.city ?? "")
-  const [pincode, setPincode] = useState(defaultValue?.pincode ?? "")
+  const { state, district, city, pincode } = value
 
   const [states, setStates] = useState<string[]>([])
-  const [districts, setDistricts] = useState<string[]>([])
-  const [cities, setCities] = useState<string[]>([])
-  const [pincodes, setPincodes] = useState<string[]>([])
+  const [districts, setDistricts] = useState<Options>(NOT_FETCHED)
+  const [cities, setCities] = useState<Options>(NOT_FETCHED)
+  const [pincodes, setPincodes] = useState<Options>(NOT_FETCHED)
 
-  // Seed loading from the pre-filled path (edit flow) so each child combobox
-  // reads as loading — not "enabled but empty" — until its mount fetch lands.
-  const [loadingDistricts, setLoadingDistricts] = useState(
-    Boolean(defaultValue?.state)
-  )
-  const [loadingCities, setLoadingCities] = useState(
-    Boolean(defaultValue?.state && defaultValue?.district)
-  )
-  const [loadingPincodes, setLoadingPincodes] = useState(
-    Boolean(
-      defaultValue?.state && defaultValue?.district && defaultValue?.city
-    )
-  )
+  // Paths each option list belongs to; a mismatch means "still loading".
+  const districtPath = state
+  const cityPath = state && district ? `${state}|${district}` : ""
+  const pinPath = state && district && city ? `${state}|${district}|${city}` : ""
 
-  // Each level fetches its children whenever its path changes. Guards keep
-  // setState out of the synchronous effect body; loading is raised by the
-  // handlers (user edits) or the initial state above (pre-fill), and always
-  // cleared in `finally` so a rejected action can't leave a combobox stuck.
+  // Each level fetches its children whenever its path changes. Results are
+  // stamped with the path they were fetched for, so a slow response for an
+  // abandoned path can never be mistaken for the current one's options.
   useEffect(() => {
     let active = true
     getStates()
@@ -197,96 +210,59 @@ export function IndiaIssueLocationForm({
   }, [])
 
   useEffect(() => {
-    if (!state) return
+    if (!districtPath) return
     let active = true
     getDistricts(state)
-      .then((next) => active && setDistricts(next))
-      .catch(() => active && setDistricts([]))
-      .finally(() => active && setLoadingDistricts(false))
+      .then(
+        (items) => active && setDistricts({ fetchedFor: districtPath, items })
+      )
+      .catch(
+        () => active && setDistricts({ fetchedFor: districtPath, items: [] })
+      )
     return () => {
       active = false
     }
-  }, [state])
+  }, [districtPath, state])
 
   useEffect(() => {
-    if (!state || !district) return
+    if (!cityPath) return
     let active = true
     getCities(state, district)
-      .then((next) => active && setCities(next))
-      .catch(() => active && setCities([]))
-      .finally(() => active && setLoadingCities(false))
+      .then((items) => active && setCities({ fetchedFor: cityPath, items }))
+      .catch(() => active && setCities({ fetchedFor: cityPath, items: [] }))
     return () => {
       active = false
     }
-  }, [state, district])
+  }, [cityPath, state, district])
 
   useEffect(() => {
-    if (!state || !district || !city) return
+    if (!pinPath) return
     let active = true
     getPincodes(state, district, city)
-      .then((next) => active && setPincodes(next))
-      .catch(() => active && setPincodes([]))
-      .finally(() => active && setLoadingPincodes(false))
+      .then((items) => active && setPincodes({ fetchedFor: pinPath, items }))
+      .catch(() => active && setPincodes({ fetchedFor: pinPath, items: [] }))
     return () => {
       active = false
     }
-  }, [state, district, city])
+  }, [pinPath, state, district, city])
 
-  function emit(next: LocationValue) {
-    onChange?.(next)
-  }
+  const loadingDistricts = Boolean(districtPath) && districts.fetchedFor !== districtPath
+  const loadingCities = Boolean(cityPath) && cities.fetchedFor !== cityPath
+  const loadingPincodes = Boolean(pinPath) && pincodes.fetchedFor !== pinPath
 
-  function handleState(next: string) {
-    setState(next)
-    setDistrict("")
-    setCity("")
-    setPincode("")
-    setDistricts([])
-    setCities([])
-    setPincodes([])
-    setLoadingDistricts(true)
-    setLoadingCities(false)
-    setLoadingPincodes(false)
-    emit({ country: COUNTRY, state: next, district: "", city: "", pincode: "" })
-  }
+  // Choosing a level clears everything below it — a district from another state
+  // would be nonsense.
+  const handleState = (next: string) =>
+    onChange({ ...EMPTY_LOCATION, state: next })
 
-  function handleDistrict(next: string) {
-    setDistrict(next)
-    setCity("")
-    setPincode("")
-    setCities([])
-    setPincodes([])
-    setLoadingCities(true)
-    setLoadingPincodes(false)
-    emit({ country: COUNTRY, state, district: next, city: "", pincode: "" })
-  }
+  const handleDistrict = (next: string) =>
+    onChange({ ...EMPTY_LOCATION, state, district: next })
 
-  function handleCity(next: string) {
-    setCity(next)
-    setPincode("")
-    setPincodes([])
-    setLoadingPincodes(true)
-    emit({ country: COUNTRY, state, district, city: next, pincode: "" })
-  }
+  const handleCity = (next: string) =>
+    onChange({ ...EMPTY_LOCATION, state, district, city: next })
 
-  function handlePincode(next: string) {
-    setPincode(next)
-    emit({ country: COUNTRY, state, district, city, pincode: next })
-  }
-
-  function resetLocation() {
-    setState("")
-    setDistrict("")
-    setCity("")
-    setPincode("")
-    setDistricts([])
-    setCities([])
-    setPincodes([])
-    setLoadingDistricts(false)
-    setLoadingCities(false)
-    setLoadingPincodes(false)
-    emit({ country: COUNTRY, state: "", district: "", city: "", pincode: "" })
-  }
+  const handlePincode = (next: string) =>
+    onChange({ country: COUNTRY, state, district, city, pincode: next })
 
   const hasSelection = Boolean(state || district || city || pincode)
 
@@ -329,7 +305,7 @@ export function IndiaIssueLocationForm({
             id="location-district"
             value={district}
             onChange={handleDistrict}
-            options={districts}
+            options={districts.items}
             disabled={!state}
             loading={loadingDistricts}
             placeholder={state ? "Select a district" : "Select a state first"}
@@ -343,7 +319,7 @@ export function IndiaIssueLocationForm({
             id="location-city"
             value={city}
             onChange={handleCity}
-            options={cities}
+            options={cities.items}
             disabled={!district}
             loading={loadingCities}
             placeholder={district ? "Select a city" : "Select a district first"}
@@ -361,7 +337,7 @@ export function IndiaIssueLocationForm({
             id="location-pincode"
             value={pincode}
             onChange={handlePincode}
-            options={pincodes}
+            options={pincodes.items}
             disabled={!city}
             loading={loadingPincodes}
             placeholder={city ? "Select or type a PIN code" : "Select a city first"}
@@ -374,7 +350,7 @@ export function IndiaIssueLocationForm({
           type="button"
           variant="ghost"
           size="sm"
-          onClick={resetLocation}
+          onClick={() => onChange(EMPTY_LOCATION)}
           disabled={!hasSelection}
         >
           <HugeiconsIcon

@@ -44,20 +44,38 @@ function hasGeolocation(): boolean {
   return typeof navigator !== "undefined" && "geolocation" in navigator
 }
 
+/** Where to open the map when there's no pin yet — see the `center` prop. */
+export interface MapCenter extends Coords {
+  zoom: number
+}
+
 /**
  * Right-column geo control for the complaint form: manual latitude/longitude
  * inputs plus a "Get current location" button that opens a bottom draggable
  * drawer with a map. The drawer tries GPS first and otherwise lets the citizen
  * tap/drag a pin to mark the exact spot.
+ *
+ * `onChange` fires on every edit (it drives the displayed value), while
+ * `onCommit` fires only once the user settles on a position — confirming the
+ * drawer, or leaving a coordinate field. The parent reverse-geocodes on commit,
+ * so typing a latitude doesn't fire a lookup per keystroke.
  */
 export function LocationPicker({
   lat,
   lng,
+  center,
   onChange,
+  onCommit,
+  hint,
 }: {
   lat: number | null
   lng: number | null
+  /** Opens the map here when no pin is set — e.g. the chosen address. */
+  center?: MapCenter | null
   onChange: (lat: number | null, lng: number | null) => void
+  onCommit?: (lat: number | null, lng: number | null) => void
+  /** Status line under the fields, e.g. how the pin compares to the address. */
+  hint?: React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
 
@@ -92,6 +110,7 @@ export function LocationPicker({
           inputMode="decimal"
           value={lat ?? ""}
           onChange={(e) => onChange(parse(e.target.value), lng)}
+          onBlur={() => onCommit?.(lat, lng)}
           onKeyDown={blockExponent}
           placeholder="9.9535"
         />
@@ -107,6 +126,7 @@ export function LocationPicker({
           inputMode="decimal"
           value={lng ?? ""}
           onChange={(e) => onChange(lat, parse(e.target.value))}
+          onBlur={() => onCommit?.(lat, lng)}
           onKeyDown={blockExponent}
           placeholder="76.2673"
         />
@@ -123,8 +143,10 @@ export function LocationPicker({
           {open && (
             <LocationDrawerBody
               initial={initial}
+              center={center}
               onConfirm={(c) => {
                 onChange(c.lat, c.lng)
+                onCommit?.(c.lat, c.lng)
                 setOpen(false)
               }}
             />
@@ -132,11 +154,13 @@ export function LocationPicker({
         </DrawerContent>
       </Drawer>
 
-      {initial == null && (
+      {initial == null ? (
         <p className="text-xs text-muted-foreground">
           No coordinates yet. Use “Get current location” to detect via GPS or
           mark the spot on the map.
         </p>
+      ) : (
+        hint
       )}
     </div>
   )
@@ -149,9 +173,11 @@ export function LocationPicker({
 
 function LocationDrawerBody({
   initial,
+  center,
   onConfirm,
 }: {
   initial: Coords | null
+  center?: MapCenter | null
   onConfirm: (coords: Coords) => void
 }) {
   const { resolvedTheme } = useTheme()
@@ -217,8 +243,10 @@ function LocationDrawerBody({
             <Map
               mapId={MAP_ID}
               colorScheme={resolvedTheme === "dark" ? "DARK" : "LIGHT"}
-              defaultCenter={draft ?? DEFAULT_CENTER}
-              defaultZoom={draft ? 15 : 12}
+              // With no pin yet, open on the address the user already chose —
+              // falling back to the sample-data city only when there's neither.
+              defaultCenter={draft ?? center ?? DEFAULT_CENTER}
+              defaultZoom={draft ? 15 : (center?.zoom ?? 12)}
               gestureHandling="greedy"
               disableDefaultUI
               clickableIcons={false}
