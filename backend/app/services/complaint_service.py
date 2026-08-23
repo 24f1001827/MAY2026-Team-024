@@ -869,15 +869,10 @@ class ComplaintService:
             }
         )
 
-        admins = UserRepository.get_all(
-            role=UserRole.ADMIN,
-        )
-
-        for admin in admins:
-
-            NotificationService.create_notification(
-                {
-                    "user_id": admin.id,
+        admin=User.query.filter_by(role=UserRole.ADMIN).first()
+        NotificationService.create_notification(
+            {
+                "user_id": admin.id,
                     "type": NotificationType.COMPLAINT_CLOSURE,
                     "title": "Complaint Closed",
                     "message": (
@@ -886,6 +881,8 @@ class ComplaintService:
                     ),
                 }
             )
+
+
 
         ComplaintRepository.update()
 
