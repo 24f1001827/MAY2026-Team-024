@@ -16,14 +16,17 @@ stock Next.
 | Language    | TypeScript `5`                                               |
 | Styling     | Tailwind CSS `4` · `tw-animate-css` · `class-variance-authority` |
 | UI          | shadcn (`4`) wrapping Radix UI · Hugeicons                   |
-| Maps        | `@vis.gl/react-google-maps` (complaints map)                 |
+| Maps        | `@vis.gl/react-google-maps` (complaints map + location picker) |
+| Location    | `postalcodes-india` (State→District→City→PIN cascade, server-side) |
+| Command/UI  | `cmdk` (comboboxes) · `recharts`, `react-day-picker`, `embla-carousel-react` (registry components) |
 | Package mgr | **Bun** (`only-allow bun` is enforced on install)            |
 | Lint / hooks| ESLint `9` (`eslint-config-next`) · Husky                    |
 
-> **Data & auth are currently mocked.** The app reads from
-> `components/shared/mock-data` and resolves a fake session via
-> `lib/auth/mock-session`. Both are marked for replacement by the real backend
-> and auth layer.
+> **The app talks to the real Flask backend.** Requests go through Next route
+> handlers under `app/api/`, which forward the caller's Bearer token to Flask
+> (`lib/api/backend.ts`). Sessions are real: `lib/auth/session.ts` holds the
+> backend-issued JWT and `lib/auth/current-user.ts` verifies it server-side for
+> role gating. There is no mock data layer.
 
 ## Prerequisites
 
@@ -94,18 +97,21 @@ This runs two processes in parallel (via `concurrently`):
 
 When you see `next` ready, open **http://localhost:3000**.
 
-### 6. Sign in (mock auth)
+### 6. Sign in
 
-Auth is currently mocked: the login form matches a **mock user by email** (any
-password is accepted) and stores their id in a session cookie. Go to
-**http://localhost:3000/login** and sign in with a seeded email, e.g.:
+Accounts are real and live in the backend database, so **the backend must be
+running** (see [`../backend/README.md`](../backend/README.md)) and
+`API_BASE_URL` must point at it.
 
-| Role  | Email               |
-| ----- | ------------------- |
-| Admin | `admin@rastro.gov`  |
+- The backend seeds a default **admin** on first boot (see `app/utils/admin_create.py`).
+- Everyone else registers at **http://localhost:3000/register** — pick Citizen,
+  Officer, or Agency. Officer and Agency accounts land in *pending approval* and
+  cannot sign in until an admin approves them; Citizens can sign in immediately.
+- Passwords must be 8+ characters with an uppercase, a lowercase, a digit, and
+  one of `!@#$%^&*(),.?":{}|<>`. The register form shows a live checklist.
+- Phone numbers are Indian mobiles: 10 digits starting 6–9.
 
-More seeded accounts live in `components/shared/mock-data/users.ts`. The
-authenticated dashboard is under `/dashboard`; public pages (home, login,
+The authenticated dashboard is under `/dashboard`; public pages (home, login,
 register) live under `app/(marketing)`.
 
 > **Troubleshooting:** if a dashboard page fails to build with an error like
@@ -127,12 +133,20 @@ register) live under `app/(marketing)`.
 
 ## Environment variables
 
+Copy `.env.example` to `.env.local` and fill these in:
+
 | Variable                          | Required | Purpose                                              |
 | --------------------------------- | -------- | ---------------------------------------------------- |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | yes\*    | Renders the complaints map on the dashboard          |
+| `API_BASE_URL`                    | **yes**  | Base URL of the Flask backend, server-side only. Defaults to `http://localhost:5000` |
+| `JWT_SECRET_KEY`                  | **yes**  | Verifies the backend-issued JWT server-side. **Must match the backend's `JWT_SECRET_KEY` exactly** — when unset, every request is treated as unauthenticated (fail-closed) |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | no\*     | Renders the complaints map and the location picker    |
 | `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`  | no       | Map ID for styled Advanced Markers (defaults to Google's `DEMO_MAP_ID`) |
 
-\* The rest of the app runs without it; only the complaints map needs it.
+Neither `API_BASE_URL` nor `JWT_SECRET_KEY` carries the `NEXT_PUBLIC_` prefix, so
+neither reaches the browser — keep it that way.
+
+\* Without a Maps key the map and location picker don't render; the rest of the
+app works, but filing a complaint needs coordinates, so you'll want it.
 
 ## Project structure
 
@@ -149,10 +163,10 @@ features/{feature}/      Feature-specific components (e.g. features/officer/…)
 components/
   shadcn/                Project wrappers around shadcn components (import these)
   ui/                    Raw shadcn/Radix primitives
-  shared/                Shared components + mock-data
+  providers/             Query + theme providers
 hooks/{feature}/         Feature hooks (use-*, keys.ts, …)
 lib/
-  auth/                  Session + role gating (currently mock)
+  auth/                  Session + JWT verification + role gating
   utils/{feature}/       Feature-specific utilities
 nav/                     Navigation platform — routes, sidebar, breadcrumbs, RBAC
 types/{feature}/         Feature types
@@ -198,7 +212,7 @@ import { Button } from "@/components/shadcn/button"      //
 import { Button } from "@/components/ui/button"          // 
 ```
 
-### Auth & roles (mock)
+### Auth & roles
 
 Roles are `Citizen | Officer | Admin | Agency`. Server components gate access
 with helpers from `lib/auth/current-user`:
@@ -209,8 +223,6 @@ import { requireRoles } from "@/lib/auth/current-user"
 await requireRoles(["Admin"])   // redirects non-admins to the dashboard home
 ```
 
-This currently reads a mock session cookie and is slated for replacement by the
-real auth layer.
-
-## Notes for Next.js 16
-
+These verify the backend-issued JWT server-side using `JWT_SECRET_KEY`, so the
+role in the token is authoritative. Verification fails closed: an unset or
+mismatched secret means every caller is anonymous.

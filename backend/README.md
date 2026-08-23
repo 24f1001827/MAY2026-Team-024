@@ -142,24 +142,53 @@ docker ps
 
 ### Once PostgreSQL is running, apply the database migrations:
 
-
-Initialize migrations (only once)
-
-```bash
-flask db init
-```
-
-Create migration
-
-```bash
-flask db migrate -m "Initial migration"
-```
-
-Apply migration
+The `migrations/` directory is already in the repo. **Do not run `flask db init`**
+— it recreates that directory and would discard the existing revision history.
+To bring a fresh database up to date, only this is needed:
 
 ```bash
 flask db upgrade
 ```
+
+Check where you are at any point:
+
+```bash
+flask db current      # the revision your database is stamped at
+flask db heads        # the latest revision(s) in the repo — should be exactly one
+```
+
+Only run `flask db migrate -m "..."` when you have **changed a model** and want to
+generate a new revision for it. Always read the generated file before applying it;
+autogenerate can produce spurious drops.
+
+<details>
+<summary><strong>"relation already exists" on <code>flask db upgrade</code></strong></summary>
+
+This means the schema is present but `alembic_version` doesn't record it, so
+Alembic replays the chain from the beginning and collides with tables that are
+already there. Confirm with:
+
+```bash
+flask db current      # prints nothing, or a revision not in migrations/versions/
+```
+
+The fix is to record the true position rather than re-running migrations. Find
+the revision(s) matching your schema, insert them, then upgrade:
+
+```sql
+-- example: a database already carrying both pre-merge branches
+INSERT INTO alembic_version (version_num) VALUES ('b8c9d0e1f2a3'), ('a8b9c0d1e2f3');
+```
+
+```bash
+flask db upgrade
+```
+
+Two rows is valid — it's how Alembic represents a multi-head state, and the
+merge revision collapses them back to one. `flask db stamp` takes only a single
+revision, so it can't express that on its own.
+
+</details>
 
 ---
 
@@ -180,6 +209,18 @@ The backend will start on:
 ```
 http://127.0.0.1:5000
 ```
+
+---
+
+## Tests
+
+```bash
+pytest                 # whole suite
+pytest -q tests/test_complaint_service.py    # one file
+```
+
+Tests run against an in-memory SQLite database (see `tests/conftest.py`), so they
+need neither Postgres nor the LLM provider keys.
 
 ---
 
