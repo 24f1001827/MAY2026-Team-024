@@ -28,6 +28,7 @@ import type {
   Complaint,
   ComplaintRemark,
   CreateComplaintRequest,
+  DisputeOutcome,
   UpdateComplaintRequest,
 } from "@/types/complaint"
 import type { ComplaintTenderSummary } from "@/types/tender"
@@ -122,8 +123,27 @@ export const complaintService = {
     return res.data
   },
 
-  async disputeCluster(id: string): Promise<void> {
-    await api.post(`/complaints/${id}/cluster/dispute`, {})
+  /** Every complaint linked to the same real-world issue, primary first. */
+  async getClusterMembers(id: string): Promise<Complaint[]> {
+    const res = await api.get<Envelope<RawComplaint[]>>(`/complaints/${id}/cluster`)
+    return (res.data ?? []).map(normalizeComplaint)
+  },
+
+  /** Citizen: contest this complaint being linked to its issue. */
+  async disputeCluster(id: string, reason: string): Promise<void> {
+    await api.post(`/complaints/${id}/cluster/dispute`, { reason })
+  },
+
+  /** Staff: settle an open dispute, splitting the complaint out or keeping it. */
+  async resolveDispute(
+    id: string,
+    outcome: DisputeOutcome,
+    note?: string,
+  ): Promise<void> {
+    await api.post(`/complaints/${id}/cluster/dispute/resolve`, {
+      outcome,
+      note: note?.trim() ? note.trim() : null,
+    })
   },
 
   async linkCluster(id: string, targetComplaintId: string): Promise<void> {

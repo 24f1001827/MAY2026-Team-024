@@ -6,6 +6,7 @@ import { complaintService } from "@/services/complaint-service"
 import { adminBudgetKeys } from "@/hooks/admin-budgets/keys"
 import type {
   CreateComplaintRequest,
+  DisputeOutcome,
   UpdateComplaintRequest,
 } from "@/types/complaint"
 import { complaintKeys } from "./keys"
@@ -73,7 +74,25 @@ export function useCloseComplaint() {
 export function useDisputeCluster() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => complaintService.disputeCluster(id),
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      complaintService.disputeCluster(id, reason),
+    onSuccess: () => qc.invalidateQueries({ queryKey: complaintKeys.all }),
+  })
+}
+
+/** Staff: uphold a dispute (splitting the complaint out) or reject it. */
+export function useResolveDispute() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      outcome,
+      note,
+    }: {
+      id: string
+      outcome: DisputeOutcome
+      note?: string
+    }) => complaintService.resolveDispute(id, outcome, note),
     onSuccess: () => qc.invalidateQueries({ queryKey: complaintKeys.all }),
   })
 }
